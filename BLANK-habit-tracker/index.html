@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HabitTracker — Build streaks. Level up. Actually change.</title>
+<meta name="description" content="The habit tracker that treats you like a gamer. XP, leagues, streak shields, AI coaching, and a little green guy called Byte who will not let you quit.">
+<meta property="og:title" content="HabitTracker — Build streaks. Level up. Actually change.">
+<meta property="og:description" content="Habit tracking with XP, leagues, streak shields, daily quests, and Byte — your AI accountability mascot.">
+<meta property="og:image" content="https://habittracker.app/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080d;
+  --panel:#0c0f18;
+  --card:#11151f;
+  --border:rgba(255,255,255,0.06);
+  --text:#f0f2f8;
+  --muted:#5c6580;
+  --green:#10b981;
+  --green-dim:rgba(16,185,129,0.12);
+  --gold:#f59e0b;
+  --radius:16px;
+}
+html{scroll-behavior:smooth;}
+body{
+  font-family:"Familjen Grotesk",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── NOISE TEXTURE OVERLAY ─────────────────────────── */
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:0.6;
+}
+
+/* ── ANIMATED GRADIENT ORBS ────────────────────────── */
+.orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.5;}
+.orb-a{width:700px;height:700px;background:radial-gradient(circle,rgba(16,185,129,0.09),transparent 70%);top:-200px;left:-200px;animation:drift 20s ease-in-out infinite alternate;}
+.orb-b{width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,0.06),transparent 70%);bottom:-100px;right:-100px;animation:drift 26s ease-in-out infinite alternate-reverse;}
+.orb-c{width:400px;height:400px;background:radial-gradient(circle,rgba(245,158,11,0.04),transparent 70%);top:50%;left:60%;animation:drift 18s ease-in-out infinite;}
+@keyframes drift{0%{transform:translate(0,0)}100%{transform:translate(60px,40px)}}
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 24px;}
+
+/* ── NAV ─────────────────────────────────────────────── */
+nav{
+  position:sticky;top:0;z-index:100;
+  padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(6,8,13,0.8);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-mark{
+  width:32px;height:32px;border-radius:10px;
+  background:linear-gradient(135deg,#10b981,#059669);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;
+  box-shadow:0 4px 16px rgba(16,185,129,0.3);
+}
+.nav-logo-text{font-size:1rem;font-weight:700;color:var(--text);}
+.nav-logo-text span{color:var(--green);}
+.nav-links{display:flex;align-items:center;gap:6px;}
+.nav-link{color:var(--muted);text-decoration:none;font-size:0.85rem;font-weight:500;padding:7px 14px;border-radius:10px;transition:all 0.2s;}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,0.04);}
+.nav-cta{
+  background:var(--green);color:#fff;
+  font-size:0.85rem;font-weight:700;
+  padding:8px 18px;border-radius:10px;
+  text-decoration:none;
+  transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(16,185,129,0.25);
+}
+.nav-cta:hover{background:#059669;box-shadow:0 6px 22px rgba(16,185,129,0.35);transform:translateY(-1px);}
+
+/* ── HERO ─────────────────────────────────────────────── */
+.hero{
+  padding:100px 0 80px;
+  text-align:center;
+  animation:fadeUp 0.8s cubic-bezier(0.34,1.05,0.64,1) both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(16,185,129,0.08);
+  border:1px solid rgba(16,185,129,0.2);
+  border-radius:20px;padding:5px 14px;
+  font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--green);margin-bottom:28px;
+}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.hero-title{
+  font-size:clamp(2.8rem,6vw,5rem);
+  font-weight:700;
+  line-height:1.1;
+  letter-spacing:-0.03em;
+  margin-bottom:12px;
+}
+.hero-title em{
+  font-family:"Instrument Serif",serif;
+  font-style:italic;
+  font-weight:400;
+  color:var(--green);
+}
+.hero-sub{
+  font-size:clamp(1rem,2vw,1.2rem);
+  color:var(--muted);
+  line-height:1.7;
+  max-width:540px;
+  margin:0 auto 40px;
+}
+.hero-sub strong{color:rgba(255,255,255,0.7);}
+
+.hero-actions{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  flex-wrap:wrap;margin-bottom:60px;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;font-size:1rem;font-weight:700;
+  padding:14px 28px;border-radius:14px;
+  text-decoration:none;border:none;cursor:pointer;
+  font-family:inherit;
+  transition:all 0.2s;
+  box-shadow:0 8px 28px rgba(16,185,129,0.35);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(16,185,129,0.45);}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);
+  border:1.5px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.65);
+  font-size:1rem;font-weight:600;
+  padding:14px 24px;border-radius:14px;
+  text-decoration:none;cursor:pointer;font-family:inherit;
+  transition:all 0.2s;
+}
+.btn-secondary:hover{border-color:rgba(255,255,255,0.22);color:var(--text);background:rgba(255,255,255,0.07);}
+
+.hero-proof{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  font-size:0.75rem;color:var(--muted);
+}
+.proof-stars{color:var(--gold);letter-spacing:2px;}
+.proof-sep{width:4px;height:4px;border-radius:50%;background:var(--muted);}
+
+/* ── BYTE MASCOT SCENE ────────────────────────────────── */
+.byte-scene{
+  display:flex;justify-content:center;
+  margin-bottom:80px;
+  animation:fadeUp 0.9s 0.15s cubic-bezier(0.34,1.05,0.64,1) both;
+}
+.byte-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:28px 32px;
+  display:flex;align-items:center;gap:20px;
+  max-width:520px;width:100%;
+  position:relative;
+  overflow:hidden;
+}
+.byte-card::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at top left,rgba(16,185,129,0.06),transparent 60%);
+}
+.byte-svg-wrap{
+  flex-shrink:0;
+  animation:byteFloat 3s ease-in-out infinite;
+}
+@keyframes byteFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.byte-text{flex:1;position:relative;}
+.byte-label{font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--green);margin-bottom:6px;}
+.byte-quote{font-size:0.95rem;line-height:1.55;color:rgba(255,255,255,0.8);}
+.byte-quote em{font-family:"Instrument Serif",serif;font-style:italic;color:var(--green);}
+.byte-tail{
+  position:absolute;bottom:-10px;left:80px;
+  width:0;height:0;
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-top:10px solid var(--card);
+}
+
+/* ── STATS BAND ──────────────────────────────────────── */
+.stats-band{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:20px;
+  overflow:hidden;
+  margin-bottom:100px;
+  animation:fadeUp 1s 0.2s cubic-bezier(0.34,1.05,0.64,1) both;
+}
+@media(max-width:600px){.stats-band{grid-template-columns:1fr 1fr;}}
+.stat-cell{
+  background:var(--panel);
+  padding:28px 20px;
+  text-align:center;
+}
+.stat-num{
+  font-size:2.2rem;font-weight:700;
+  color:var(--text);letter-spacing:-0.03em;
+  line-height:1;margin-bottom:4px;
+}
+.stat-num span{color:var(--green);}
+.stat-lbl{font-size:0.72rem;color:var(--muted);font-weight:500;}
+
+/* ── SECTION SHARED ──────────────────────────────────── */
+.section{padding:80px 0;}
+.section-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:0.65rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--green);margin-bottom:16px;
+}
+.section-title{
+  font-size:clamp(1.8rem,3.5vw,2.6rem);
+  font-weight:700;letter-spacing:-0.025em;
+  line-height:1.2;margin-bottom:14px;
+}
+.section-title em{
+  font-family:"Instrument Serif",serif;
+  font-style:italic;font-weight:400;color:var(--green);
+}
+.section-sub{
+  font-size:1rem;color:var(--muted);
+  line-height:1.7;max-width:500px;
+}
+.section-sub strong{color:rgba(255,255,255,0.7);}
+
+/* ── FEATURES GRID ───────────────────────────────────── */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;margin-top:48px;
+}
+@media(max-width:800px){.features-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:520px){.features-grid{grid-template-columns:1fr;}}
+
+.feat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
+  transition:all 0.25s;
+  cursor:default;
+}
+.feat-card:hover{
+  border-color:rgba(16,185,129,0.2);
+  transform:translateY(-3px);
+  box-shadow:0 12px 40px rgba(0,0,0,0.3);
+}
+.feat-card.large{grid-column:span 2;}
+@media(max-width:800px){.feat-card.large{grid-column:span 1;}}
+.feat-icon{
+  font-size:1.6rem;margin-bottom:14px;
+  width:44px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--green-dim);
+  border-radius:12px;
+}
+.feat-name{font-size:1rem;font-weight:700;margin-bottom:6px;}
+.feat-desc{font-size:0.82rem;color:var(--muted);line-height:1.6;}
+.feat-tag{
+  display:inline-block;margin-top:10px;
+  font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--gold);background:rgba(245,158,11,0.1);
+  border:1px solid rgba(245,158,11,0.2);border-radius:20px;padding:2px 8px;
+}
+
+/* ── GAMIFICATION SPLIT ──────────────────────────────── */
+.game-section{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:48px;align-items:center;
+  padding:80px 0;
+}
+@media(max-width:720px){.game-section{grid-template-columns:1fr;}}
+
+.game-visual{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:28px;
+  order:-1;
+}
+@media(min-width:720px){.game-visual{order:0;}}
+
+/* Fake app UI components */
+.fake-xp{margin-bottom:16px;}
+.fake-xp-top{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-bottom:6px;}
+.fake-xp-bar{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;}
+.fake-xp-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:4px;width:68%;animation:xpGrow 2s 0.5s ease-out both;}
+@keyframes xpGrow{from{width:0}to{width:68%}}
+
+.fake-league{
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,rgba(250,204,21,0.08),rgba(250,204,21,0.03));
+  border:1px solid rgba(250,204,21,0.15);
+  border-radius:12px;padding:12px 16px;margin-bottom:14px;
+}
+.fake-league-badge{font-size:1.8rem;}
+.fake-league-info{flex:1;}
+.fake-league-name{font-size:0.88rem;font-weight:700;color:#facc15;}
+.fake-league-rank{font-size:0.7rem;color:var(--muted);}
+
+.fake-quests{display:flex;flex-direction:column;gap:8px;}
+.fake-quest{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;
+}
+.fq-icon{font-size:1rem;flex-shrink:0;}
+.fq-text{flex:1;}
+.fq-name{font-size:0.78rem;font-weight:700;}
+.fq-desc{font-size:0.65rem;color:var(--muted);}
+.fq-bar{width:60px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;flex-shrink:0;}
+.fq-fill{height:100%;background:var(--green);border-radius:2px;}
+.fq-fill.w60{width:60%;}
+.fq-fill.w100{width:100%;background:#4ade80;}
+.fq-fill.w30{width:30%;}
+
+/* ── STREAK SECTION ──────────────────────────────────── */
+.streak-section{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:48px;align-items:center;
+  padding:0 0 80px;
+}
+@media(max-width:720px){.streak-section{grid-template-columns:1fr;}}
+
+.streak-visual{display:flex;flex-direction:column;gap:12px;}
+.streak-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;
+  display:flex;align-items:center;gap:14px;
+}
+.streak-num{
+  font-size:2rem;font-weight:700;color:var(--text);line-height:1;
+  min-width:48px;text-align:center;
+}
+.streak-num.fire{color:#f97316;}
+.streak-meta{flex:1;}
+.streak-title{font-size:0.85rem;font-weight:700;margin-bottom:2px;}
+.streak-sub{font-size:0.7rem;color:var(--muted);}
+.streak-badge{
+  font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
+  padding:3px 8px;border-radius:20px;
+  background:rgba(16,185,129,0.12);color:var(--green);
+  border:1px solid rgba(16,185,129,0.2);
+}
+.streak-badge.shield{background:rgba(96,165,250,0.1);color:#60a5fa;border-color:rgba(96,165,250,0.2);}
+.streak-badge.freeze{background:rgba(147,197,253,0.08);color:#93c5fd;border-color:rgba(147,197,253,0.15);}
+
+/* ── THEMES SECTION ──────────────────────────────────── */
+.themes-section{text-align:center;padding:0 0 80px;}
+.themes-grid{
+  display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
+  margin-top:40px;
+}
+.theme-swatch{
+  width:52px;height:52px;border-radius:14px;
+  border:2px solid rgba(255,255,255,0.08);
+  cursor:pointer;transition:all 0.2s;
+  position:relative;overflow:hidden;
+}
+.theme-swatch:hover{transform:scale(1.15);border-color:rgba(255,255,255,0.3);}
+.theme-swatch.free-only::after{
+  content:"FREE";
+  position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+  font-size:0.38rem;font-weight:900;letter-spacing:0.05em;color:rgba(255,255,255,0.7);
+  white-space:nowrap;
+}
+.theme-swatch.premium::after{
+  content:"⭐";
+  position:absolute;bottom:2px;right:3px;
+  font-size:0.55rem;
+}
+
+/* ── BYTE PERSONALITY SECTION ───────────────────────── */
+.byte-section{
+  padding:0 0 80px;
+  text-align:center;
+}
+.byte-messages{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  margin-top:48px;
+}
+@media(max-width:720px){.byte-messages{grid-template-columns:1fr;}}
+.byte-msg-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:22px;
+  text-align:left;
+  transition:all 0.2s;
+}
+.byte-msg-card:hover{border-color:rgba(16,185,129,0.2);transform:translateY(-2px);}
+.bm-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.bm-avatar{
+  width:32px;height:32px;flex-shrink:0;
+  animation:byteFloat 3s ease-in-out infinite;
+}
+.bm-mood{font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);}
+.bm-text{font-size:0.83rem;line-height:1.6;color:rgba(255,255,255,0.7);}
+.bm-text em{font-family:"Instrument Serif",serif;font-style:italic;color:var(--text);}
+
+/* ── PRICING SECTION ─────────────────────────────────── */
+.pricing-section{padding:0 0 80px;}
+.pricing-toggle{
+  display:flex;align-items:center;justify-content:center;gap:0;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:4px;max-width:260px;margin:0 auto 40px;
+  position:relative;
+}
+.pt-pill{
+  flex:1;padding:9px 18px;border-radius:10px;border:none;
+  background:transparent;color:var(--muted);
+  font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;
+}
+.pt-pill.active{background:var(--green);color:#fff;box-shadow:0 3px 12px rgba(16,185,129,0.3);}
+.pt-save{
+  position:absolute;top:-11px;right:8px;
+  background:linear-gradient(135deg,#f59e0b,#d97706);
+  color:#000;font-size:0.58rem;font-weight:900;
+  border-radius:20px;padding:2px 8px;letter-spacing:0.06em;
+  white-space:nowrap;
+}
+
+.pricing-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px;margin:0 auto;}
+@media(max-width:600px){.pricing-cards{grid-template-columns:1fr;}}
+
+.pc{
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:22px;padding:32px;
+  position:relative;transition:all 0.2s;
+}
+.pc.featured{
+  border-color:rgba(16,185,129,0.35);
+  background:linear-gradient(145deg,#0d1a12,#0f1820);
+  box-shadow:0 0 0 1px rgba(16,185,129,0.1),0 24px 60px rgba(0,0,0,0.4);
+}
+.pc-popular{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;font-size:0.62rem;font-weight:900;
+  letter-spacing:0.08em;text-transform:uppercase;
+  border-radius:20px;padding:3px 14px;white-space:nowrap;
+}
+.pc-name{font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:12px;}
+.pc-price-row{display:flex;align-items:flex-end;gap:4px;margin-bottom:4px;}
+.pc-curr{font-size:1.1rem;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.pc-price{font-size:2.8rem;font-weight:700;letter-spacing:-0.04em;line-height:1;color:var(--text);}
+.pc-period{font-size:0.78rem;color:var(--muted);margin-bottom:4px;}
+.pc-equiv{font-size:0.68rem;color:var(--green);font-weight:700;height:18px;margin-bottom:18px;}
+.pc-divider{height:1px;background:var(--border);margin-bottom:18px;}
+.pc-features{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+.pcf{display:flex;align-items:center;gap:9px;font-size:0.8rem;color:rgba(255,255,255,0.65);}
+.pcf-y{width:17px;height:17px;border-radius:50%;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.35);display:flex;align-items:center;justify-content:center;font-size:0.58rem;color:#10b981;flex-shrink:0;}
+.pcf-n{width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:0.58rem;color:rgba(255,255,255,0.15);flex-shrink:0;}
+.pcf.dim{color:rgba(255,255,255,0.25);}
+.pc-cta{
+  width:100%;padding:13px;border-radius:12px;border:none;
+  font-size:0.9rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.2s;
+}
+.pc-cta.main{
+  background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+  box-shadow:0 4px 20px rgba(16,185,129,0.3);
+}
+.pc-cta.main:hover{box-shadow:0 6px 28px rgba(16,185,129,0.42);transform:translateY(-1px);}
+.pc-cta.free{background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:var(--muted);}
+.pc-cta.free:hover{border-color:rgba(255,255,255,0.15);color:var(--text);}
+
+/* ── TESTIMONIALS ─────────────────────────────────────── */
+.testimonials{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:14px;padding:0 0 80px;
+}
+@media(max-width:720px){.testimonials{grid-template-columns:1fr;}}
+.tcard{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;
+}
+.tcard-stars{color:var(--gold);font-size:0.85rem;letter-spacing:2px;margin-bottom:12px;}
+.tcard-text{font-size:0.85rem;line-height:1.7;color:rgba(255,255,255,0.65);margin-bottom:16px;}
+.tcard-author{display:flex;align-items:center;gap:10px;}
+.tcard-avatar{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;
+  flex-shrink:0;
+}
+.tcard-name{font-size:0.82rem;font-weight:700;}
+.tcard-handle{font-size:0.68rem;color:var(--muted);}
+
+/* ── FINAL CTA ────────────────────────────────────────── */
+.final-cta{
+  text-align:center;
+  background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(139,92,246,0.03));
+  border:1px solid rgba(16,185,129,0.12);
+  border-radius:28px;
+  padding:72px 32px 64px;
+  margin-bottom:80px;
+  position:relative;overflow:hidden;
+}
+.final-cta::before{
+  content:"";position:absolute;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%);
+  top:-200px;left:50%;transform:translateX(-50%);
+  pointer-events:none;
+}
+.fc-byte{
+  display:flex;justify-content:center;margin-bottom:20px;
+  animation:byteFloat 3s ease-in-out infinite;
+}
+.fc-title{
+  font-size:clamp(2rem,4vw,3rem);
+  font-weight:700;letter-spacing:-0.03em;
+  line-height:1.2;margin-bottom:14px;
+}
+.fc-title em{
+  font-family:"Instrument Serif",serif;
+  font-style:italic;font-weight:400;color:var(--green);
+}
+.fc-sub{font-size:1rem;color:var(--muted);margin-bottom:32px;max-width:440px;margin-left:auto;margin-right:auto;}
+.fc-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.fc-fine{font-size:0.68rem;color:rgba(255,255,255,0.2);margin-top:20px;}
+
+/* ── FOOTER ───────────────────────────────────────────── */
+footer{
+  border-top:1px solid var(--border);
+  padding:32px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.footer-left{display:flex;align-items:center;gap:10px;font-size:0.8rem;color:var(--muted);}
+.footer-heart{color:#f87171;}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{color:var(--muted);text-decoration:none;font-size:0.78rem;transition:color 0.2s;}
+.footer-links a:hover{color:var(--text);}
+
+/* ── SCROLL ANIMATIONS ────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity 0.6s ease,transform 0.6s ease;}
+.reveal.visible{opacity:1;transform:none;}
+.reveal-delay-1{transition-delay:0.1s;}
+.reveal-delay-2{transition-delay:0.2s;}
+.reveal-delay-3{transition-delay:0.3s;}
+
+/* ── RESPONSIVE NAV ───────────────────────────────────── */
+@media(max-width:600px){
+  .nav-links .nav-link{display:none;}
+  nav{padding:14px 20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="orbs">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-mark">🧬</div>
+    <div class="nav-logo-text">Habit<span>Tracker</span></div>
+  </a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="upgrade.html" class="nav-link">Upgrade</a>
+    <a href="auth.html" class="nav-link">Sign in</a>
+    <a href="auth.html" class="nav-cta">Start free →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="wrap">
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-dot"></div>
+      No boring habit apps. We fixed it.
+    </div>
+    <h1 class="hero-title">
+      The habit tracker<br>that <em>actually</em> works
+    </h1>
+    <p class="hero-sub">
+      XP, leagues, streak shields, daily quests, and <strong>Byte</strong> — a little green accountability mascot who will not let you quit. Free to start.
+    </p>
+    <div class="hero-actions">
+      <a href="auth.html" class="btn-primary">
+        <span>Start building habits</span>
+        <span>→</span>
+      </a>
+      <a href="#features" class="btn-secondary">
+        <span>See how it works</span>
+      </a>
+    </div>
+    <div class="hero-proof">
+      <div class="proof-stars">★★★★★</div>
+      <div class="proof-sep"></div>
+      <span>Free forever · No credit card</span>
+      <div class="proof-sep"></div>
+      <span>Works on any device</span>
+    </div>
+  </section>
+
+  <!-- BYTE INTRO -->
+  <div class="byte-scene">
+    <div class="byte-card">
+      <div class="byte-svg-wrap">
+        <svg width="72" height="72" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg" cx="45%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#6ee7b7"/>
+              <stop offset="60%" stop-color="#10b981"/>
+              <stop offset="100%" stop-color="#059669"/>
+            </radialGradient>
+            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#10b981" flood-opacity="0.5"/></filter>
+          </defs>
+          <ellipse cx="50" cy="50" rx="48" ry="48" fill="url(#glow)"/>
+          <circle cx="50" cy="50" r="38" fill="url(#bg)" filter="url(#sh)"/>
+          <ellipse cx="37" cy="33" rx="12" ry="8" fill="white" opacity="0.25" transform="rotate(-20 37 33)"/>
+          <line x1="50" y1="12" x2="50" y2="26" stroke="#059669" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="50" cy="10" r="4" fill="#4ade80"/>
+          <circle cx="12" cy="50" r="7" fill="#059669"/>
+          <circle cx="88" cy="50" r="7" fill="#059669"/>
+          <!-- happy face -->
+          <circle cx="38" cy="44" r="4" fill="#052e16"/>
+          <circle cx="62" cy="44" r="4" fill="#052e16"/>
+          <path d="M 36 58 Q 50 68 64 58" stroke="#052e16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="26" cy="54" r="6" fill="#4ade80" opacity="0.3"/>
+          <circle cx="74" cy="54" r="6" fill="#4ade80" opacity="0.3"/>
+        </svg>
+      </div>
+      <div class="byte-text">
+        <div class="byte-label">Hi, I'm Byte 👋</div>
+        <div class="byte-quote">
+          "I will tip you, roast you, celebrate you, and float here until you <em>do the thing</em>. I have waited 47 minutes for someone to mark a habit. I am not above it."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-band reveal">
+    <div class="stat-cell">
+      <div class="stat-num"><span>10</span> leagues</div>
+      <div class="stat-lbl">Bronze → Legendary</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num"><span>9</span> themes</div>
+      <div class="stat-lbl">Pick your vibe</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num"><span>8</span> quest types</div>
+      <div class="stat-lbl">New challenges daily</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num"><span>∞</span> streaks</div>
+      <div class="stat-lbl">Protected by shields</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="section-tag">✦ Features</div>
+    <h2 class="section-title">Everything you need to<br><em>actually stick to it</em></h2>
+    <p class="section-sub">Not just a list of checkboxes. A full system designed to keep you going on day 3, day 30, and day 300.</p>
+
+    <div class="features-grid reveal">
+      <div class="feat-card large">
+        <div class="feat-icon">📅</div>
+        <div class="feat-name">Monthly grid + Weekly view</div>
+        <div class="feat-desc">See the full picture — a colour-coded month grid and a 7-day schedule timeline with your habits laid out by time. Mark done, mark failed, or let the day slide. Your call.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔥</div>
+        <div class="feat-name">Streak tracking that isn't fragile</div>
+        <div class="feat-desc">Daily streaks, login streaks, per-habit streaks. Shields auto-save you from one bad day. Gems let you freeze a habit when life happens.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-name">XP, levels & combo bonuses</div>
+        <div class="feat-desc">Mark habits quickly back-to-back and hit up to 5× XP multipliers. Every level-up is a moment.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏆</div>
+        <div class="feat-name">10-league progression system</div>
+        <div class="feat-desc">Start at Bronze. Grind to Legendary. Each league has its own leaderboard of players near your level.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-name">Daily quests</div>
+        <div class="feat-desc">Hat Trick, Early Riser, Power Hour, On Fire — 3 fresh quests every day with XP and gem rewards. Never the same two days in a row.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">👥</div>
+        <div class="feat-name">Friends & challenges</div>
+        <div class="feat-desc">Add friends, challenge them to habit competitions, and nudge them when their streak is at risk. Accountability that actually works.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🧠</div>
+        <div class="feat-name">AI Habit Coach</div>
+        <div class="feat-desc">Chat with an AI coach that knows your real data — which habits you skip, which you crush, and what to do about it. Powered by Claude AI.</div>
+        <div class="feat-tag">⭐ Premium</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📓</div>
+        <div class="feat-name">Journal + mood tracking</div>
+        <div class="feat-desc">Log your mood daily, write entries, and see patterns emerge over months. Free tier gets 5 entries/month. Premium is unlimited.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">✨</div>
+        <div class="feat-name">Seasonal events</div>
+        <div class="feat-desc">Halloween Spooky Streak, Summer Grind, New Year Sprint — limited-time events with XP bonuses and exclusive badges.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAMIFICATION SECTION -->
+  <div class="game-section reveal">
+    <div>
+      <div class="section-tag">✦ Gamification</div>
+      <h2 class="section-title">It's not a habit app.<br>It's a <em>game you win</em> by<br>showing up.</h2>
+      <p class="section-sub">
+        <strong>XP compounds.</strong> Every habit you complete earns XP. Combos multiply it. Levels unlock. Leagues promote you. The more consistent you are, the more momentum you build — and momentum is what makes habits stick.
+      </p>
+      <br>
+      <p class="section-sub">Daily quests give you short-term goals on top of your long-term habits. Earn gems. Spend them on streak protection. It all feeds itself.</p>
+    </div>
+    <div class="game-visual reveal reveal-delay-1">
+      <div class="fake-xp">
+        <div class="fake-xp-top">
+          <span style="font-size:0.75rem;font-weight:700">Level 12 · 2,840 XP</span>
+          <span style="color:var(--green);font-size:0.72rem;font-weight:700">68%</span>
+        </div>
+        <div class="fake-xp-bar"><div class="fake-xp-fill"></div></div>
+      </div>
+      <div class="fake-league">
+        <div class="fake-league-badge">🥇</div>
+        <div class="fake-league-info">
+          <div class="fake-league-name">Gold League</div>
+          <div class="fake-league-rank">Rank #3 this week · 800 XP to Platinum</div>
+        </div>
+        <span style="font-size:0.7rem;color:var(--gold);font-weight:700">↑ +2</span>
+      </div>
+      <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px">Today's quests</div>
+      <div class="fake-quests">
+        <div class="fake-quest">
+          <div class="fq-icon">⭐</div>
+          <div class="fq-text">
+            <div class="fq-name">Perfect Day</div>
+            <div class="fq-desc">Complete ALL habits · 50 XP · 25 💎</div>
+          </div>
+          <div class="fq-bar"><div class="fq-fill w60"></div></div>
+        </div>
+        <div class="fake-quest" style="border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.04)">
+          <div class="fq-icon">🌅</div>
+          <div class="fq-text">
+            <div class="fq-name" style="color:#4ade80">Early Riser ✓</div>
+            <div class="fq-desc" style="color:var(--green)">Completed · 20 XP earned</div>
+          </div>
+          <div class="fq-bar"><div class="fq-fill w100"></div></div>
+        </div>
+        <div class="fake-quest">
+          <div class="fq-icon">🔥</div>
+          <div class="fq-text">
+            <div class="fq-name">On Fire</div>
+            <div class="fq-desc">Reach a 5-day streak · 35 XP · 15 💎</div>
+          </div>
+          <div class="fq-bar"><div class="fq-fill w30"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STREAKS SECTION -->
+  <div class="streak-section reveal">
+    <div class="streak-visual reveal-delay-1">
+      <div class="streak-card">
+        <div class="streak-num fire">🔥 47</div>
+        <div class="streak-meta">
+          <div class="streak-title">Daily habit streak</div>
+          <div class="streak-sub">Longest: 63 days</div>
+        </div>
+        <div class="streak-badge">Active</div>
+      </div>
+      <div class="streak-card">
+        <div class="streak-num" style="color:#60a5fa">🛡️ 2</div>
+        <div class="streak-meta">
+          <div class="streak-title">Streak shields</div>
+          <div class="streak-sub">Earned from perfect weeks</div>
+        </div>
+        <div class="streak-badge shield">Ready</div>
+      </div>
+      <div class="streak-card">
+        <div class="streak-num" style="color:#93c5fd">❄️ 1</div>
+        <div class="streak-meta">
+          <div class="streak-title">Freeze banked</div>
+          <div class="streak-sub">Cost 30 💎 · protects 1 day</div>
+        </div>
+        <div class="streak-badge freeze">Saved</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-tag">✦ Streak protection</div>
+      <h2 class="section-title">One bad day<br>won't end<br><em>everything</em>.</h2>
+      <p class="section-sub">
+        Complete a <strong>perfect week</strong> (every habit, every day) and earn a 🛡️ Shield. Next time you miss a day, it auto-activates — no gems needed.
+      </p>
+      <br>
+      <p class="section-sub">Or bank ❄️ Freezes using gems and spend them when you know life is about to get in the way. Plan your gaps. Keep the streak.</p>
+    </div>
+  </div>
+
+  <!-- THEMES -->
+  <section class="themes-section reveal">
+    <div class="section-tag" style="justify-content:center">✦ Themes</div>
+    <h2 class="section-title">9 themes.<br>Pick your <em>aesthetic</em>.</h2>
+    <p class="section-sub" style="margin:0 auto">Dark and Light are free. The rest are Premium. Each one is fully considered — every colour, every card, every chart.</p>
+    <div class="themes-grid">
+      <div class="theme-swatch free-only" style="background:linear-gradient(135deg,#09090f,#161622)" title="Dark (Free)"></div>
+      <div class="theme-swatch free-only" style="background:linear-gradient(135deg,#f2f4f0,#e8ede9)" title="Light (Free)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#1a0814,#2c1020)" title="Pink (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#060d1a,#101e34)" title="Blue (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#0f0d00,#221e00)" title="Yellow (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#080f08,#152015)" title="Army (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#0f0202,#220606)" title="Ferrari (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#030308,#0d0d1c)" title="Midnight (Premium)"></div>
+      <div class="theme-swatch premium" style="background:linear-gradient(135deg,#020c14,#081c30)" title="Ocean (Premium)"></div>
+    </div>
+  </section>
+
+  <!-- BYTE PERSONALITY -->
+  <section class="byte-section reveal">
+    <div class="section-tag" style="justify-content:center">✦ Byte</div>
+    <h2 class="section-title">Your mascot.<br>Your accountability <em>partner</em>.</h2>
+    <p class="section-sub" style="margin:0 auto">Byte is not a notification. Byte is a whole character. He tips, roasts, celebrates, idles, waves, spins, and occasionally goes into Super Mode if you click him enough.</p>
+    <div class="byte-messages">
+      <div class="byte-msg-card">
+        <div class="bm-header">
+          <svg class="bm-avatar" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs><radialGradient id="b1" cx="45%" cy="35%" r="60%"><stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#059669"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="38" fill="url(#b1)"/>
+            <circle cx="38" cy="44" r="4" fill="#052e16"/><circle cx="62" cy="44" r="4" fill="#052e16"/>
+            <path d="M 36 58 Q 50 68 64 58" stroke="#052e16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="bm-mood">Byte's Tip</div>
+        </div>
+        <div class="bm-text">"Completing habits back-to-back gives you a <em>combo XP multiplier</em>. Up to 5×. Byte has done the maths. Do them fast."</div>
+      </div>
+      <div class="byte-msg-card">
+        <div class="bm-header">
+          <svg class="bm-avatar" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs><radialGradient id="b2" cx="45%" cy="35%" r="60%"><stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#059669"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="38" fill="url(#b2)"/>
+            <circle cx="38" cy="44" r="4" fill="#052e16"/><circle cx="62" cy="44" r="4" fill="#052e16"/>
+            <!-- wink -->
+            <path d="M 55 42 Q 62 38 69 42" stroke="#052e16" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M 36 58 Q 50 68 64 58" stroke="#052e16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="bm-mood">Roast Mode 🔥</div>
+        </div>
+        <div class="bm-text">"Byte noticed you have <em>12 habits set up</em> and completed 2 of them. That's not a streak. That's a Tuesday. Try 3 habits done consistently."</div>
+      </div>
+      <div class="byte-msg-card">
+        <div class="bm-header">
+          <svg class="bm-avatar" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs><radialGradient id="b3" cx="45%" cy="35%" r="60%"><stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#059669"/></radialGradient></defs>
+            <circle cx="50" cy="50" r="38" fill="url(#b3)"/>
+            <!-- excited eyes -->
+            <ellipse cx="38" cy="44" rx="5" ry="6" fill="#052e16"/>
+            <ellipse cx="62" cy="44" rx="5" ry="6" fill="#052e16"/>
+            <path d="M 33 60 Q 50 74 67 60" stroke="#052e16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="bm-mood">Celebration!! 🎉</div>
+        </div>
+        <div class="bm-text">"<em>PERFECT DAY!</em> All habits done. Byte is going absolutely feral right now. This is what Byte lives for. Please do this again tomorrow. And the day after."</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <div class="testimonials reveal">
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <div class="tcard-text">"I've tried every habit app and this is the first one I've actually used for more than a week. The XP system is stupidly addictive."</div>
+      <div class="tcard-author">
+        <div class="tcard-avatar" style="background:rgba(16,185,129,0.15)">😊</div>
+        <div>
+          <div class="tcard-name">Jordan M.</div>
+          <div class="tcard-handle">47-day streak</div>
+        </div>
+      </div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <div class="tcard-text">"Byte roasted me for having 10 habits and completing 1. Fair. I now have 4 habits and I do all of them. Progress."</div>
+      <div class="tcard-author">
+        <div class="tcard-avatar" style="background:rgba(96,165,250,0.12)">🧢</div>
+        <div>
+          <div class="tcard-name">Sam K.</div>
+          <div class="tcard-handle">Gold League</div>
+        </div>
+      </div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <div class="tcard-text">"The streak shield feature alone is worth Premium. I travel a lot and I've kept a 90-day streak because of it. Genuinely life-changing."</div>
+      <div class="tcard-author">
+        <div class="tcard-avatar" style="background:rgba(245,158,11,0.12)">✈️</div>
+        <div>
+          <div class="tcard-name">Priya R.</div>
+          <div class="tcard-handle">90-day streak 🔥</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <section class="pricing-section" id="pricing">
+    <div style="text-align:center;margin-bottom:0">
+      <div class="section-tag" style="justify-content:center">✦ Pricing</div>
+      <h2 class="section-title">Start free.<br><em>Unlock everything</em> when<br>you're ready.</h2>
+    </div>
+
+    <div class="pricing-toggle reveal">
+      <button class="pt-pill" id="ptMonthly" onclick="setPeriod('monthly')">Monthly</button>
+      <button class="pt-pill active" id="ptYearly" onclick="setPeriod('yearly')">Yearly</button>
+      <div class="pt-save">Save 37%</div>
+    </div>
+
+    <div class="pricing-cards reveal">
+      <!-- FREE -->
+      <div class="pc">
+        <div class="pc-name">Free</div>
+        <div class="pc-price-row"><div class="pc-curr">£</div><div class="pc-price">0</div></div>
+        <div class="pc-period">forever</div>
+        <div class="pc-equiv">&nbsp;</div>
+        <div class="pc-divider"></div>
+        <div class="pc-features">
+          <div class="pcf"><div class="pcf-y">✓</div> Up to 5 habits</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Daily streak tracking</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Weekly calendar view</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Dark &amp; light themes</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Basic Byte tips</div>
+          <div class="pcf dim"><div class="pcf-n">✕</div> XP, levels &amp; leagues</div>
+          <div class="pcf dim"><div class="pcf-n">✕</div> Streak shields &amp; freezes</div>
+          <div class="pcf dim"><div class="pcf-n">✕</div> Friends &amp; challenges</div>
+        </div>
+        <button class="pc-cta free" onclick="window.location.href='auth.html'">Start for free</button>
+      </div>
+      <!-- PREMIUM -->
+      <div class="pc featured">
+        <div class="pc-popular">⭐ Most popular</div>
+        <div class="pc-name">Premium</div>
+        <div class="pc-price-row"><div class="pc-curr">£</div><div class="pc-price" id="pcPrice">29.99</div></div>
+        <div class="pc-period" id="pcPeriod">per year</div>
+        <div class="pc-equiv" id="pcEquiv">Just £2.50/month</div>
+        <div class="pc-divider"></div>
+        <div class="pc-features">
+          <div class="pcf"><div class="pcf-y">✓</div> <strong style="color:#fff">Unlimited habits</strong></div>
+          <div class="pcf"><div class="pcf-y">✓</div> XP, levels, gems &amp; leagues</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Streak shields &amp; freezes</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Friends, challenges &amp; nudges</div>
+          <div class="pcf"><div class="pcf-y">✓</div> AI Habit Coach</div>
+          <div class="pcf"><div class="pcf-y">✓</div> All 9 themes</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Analytics + Year Wrapped</div>
+          <div class="pcf"><div class="pcf-y">✓</div> Full Byte personality</div>
+        </div>
+        <button class="pc-cta main" onclick="window.location.href='upgrade.html'" id="pcCta">
+          Get Premium — £29.99/yr
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <div class="final-cta reveal">
+    <div class="fc-byte">
+      <svg width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="fcb" cx="45%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#6ee7b7"/>
+            <stop offset="100%" stop-color="#059669"/>
+          </radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="38" fill="url(#fcb)" filter="drop-shadow(0 4px 16px rgba(16,185,129,0.5))"/>
+        <circle cx="38" cy="44" r="4" fill="#052e16"/><circle cx="62" cy="44" r="4" fill="#052e16"/>
+        <path d="M 33 60 Q 50 74 67 60" stroke="#052e16" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="50" cy="10" r="4" fill="#4ade80"/>
+        <line x1="50" y1="12" x2="50" y2="26" stroke="#059669" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h2 class="fc-title">Byte is ready.<br>Are <em>you</em>?</h2>
+    <p class="fc-sub">Free to start. Takes 60 seconds. No credit card. Byte has been waiting long enough.</p>
+    <div class="fc-actions">
+      <a href="auth.html" class="btn-primary">Create your account →</a>
+      <a href="upgrade.html" class="btn-secondary">See Premium plans</a>
+    </div>
+    <div class="fc-fine">Free forever · Premium from £3.99/mo · Cancel any time</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    <span>Made with <span class="footer-heart">♥</span> · © 2026 HabitTracker</span>
+  </div>
+  <div class="footer-links">
+    <a href="auth.html">Sign up</a>
+    <a href="upgrade.html">Pricing</a>
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+  </div>
+</footer>
+
+<script>
+// Pricing toggle
+let period = "yearly";
+function setPeriod(p) {
+  period = p;
+  document.getElementById("ptMonthly").classList.toggle("active", p === "monthly");
+  document.getElementById("ptYearly").classList.toggle("active",  p === "yearly");
+  if (p === "yearly") {
+    document.getElementById("pcPrice").textContent  = "29.99";
+    document.getElementById("pcPeriod").textContent = "per year";
+    document.getElementById("pcEquiv").textContent  = "Just £2.50/month";
+    document.getElementById("pcCta").textContent    = "Get Premium — £29.99/yr";
+  } else {
+    document.getElementById("pcPrice").textContent  = "3.99";
+    document.getElementById("pcPeriod").textContent = "per month";
+    document.getElementById("pcEquiv").textContent  = "Billed monthly · cancel any time";
+    document.getElementById("pcCta").textContent    = "Get Premium — £3.99/mo";
+  }
+}
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add("visible");
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+
+// Theme swatches — tooltip on hover
+document.querySelectorAll(".theme-swatch").forEach(sw => {
+  sw.addEventListener("mouseenter", () => {
+    sw.style.boxShadow = "0 0 0 3px rgba(16,185,129,0.4)";
+  });
+  sw.addEventListener("mouseleave", () => {
+    sw.style.boxShadow = "";
+  });
+});
+</script>
+</body>
+</html>

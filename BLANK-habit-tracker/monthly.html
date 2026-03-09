@@ -1,0 +1,3862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Monthly Habit Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    // Apply theme INSTANTLY before any CSS renders — eliminates flash
+    (function(){
+      var t = localStorage.getItem('habitTheme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      // Also set on body once it exists
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.setAttribute('data-theme', t);
+      });
+    })();
+  </script>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Habits" />
+
+  <link rel="stylesheet" href="css/reset.css" />
+  <link rel="stylesheet" href="css/themes.css" />
+  <link rel="stylesheet" href="css/monthly-layout.css" />
+  <link rel="stylesheet" href="css/monthly-grid.css" />
+  <link rel="stylesheet" href="css/charts.css" />
+  <link rel="stylesheet" href="css/monthly-dailystreak.css" />
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+      transition: background 0.3s, color 0.3s;
+      opacity: 0; /* Start hidden — _pageReady fades in */
+    }
+
+    /* ========================= HEADER ========================= */
+    .month-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 16px 20px;
+    }
+
+    .month-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .month-title h1 {
+      font-size: 2rem;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    .month-title span {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ========================= MONTHLY STATS ========================= */
+    .month-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .month-stats .stat {
+      padding: 4px 8px;
+    }
+
+    .month-stats .stat label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .month-stats .stat strong {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* ========================= PROGRESS BAR ========================= */
+    .progress-stat .progress-bar-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-stat .progress-bar {
+      width: 120px;
+      height: 11px;
+      background: var(--border-soft, rgba(255,255,255,0.1));
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* KEY FIX: --primary not hardcoded green */
+    .progress-stat .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--primary, #4CAF50);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-stat .progress-percent {
+      min-width: 38px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    /* ========================= NAV BUTTONS ========================= */
+    .nav-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-soft);
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      background: var(--primary, #4CAF50);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .nav-btn.logout {
+      background: #ff5252;
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .nav-btn.logout:hover { background: #cc0000; }
+
+    /* ========================= THEME PICKER ========================= */
+    .theme-picker select {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-soft, #ccc);
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* ========================= DASHBOARD ========================= */
+    .dashboard { padding: 16px 20px; }
+
+    .task-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .task-panel-header h2 { margin: 0; font-size: 1.2rem; }
+
+    #addTaskBtn {
+      padding: 8px 16px;
+      background: var(--primary, #4CAF50);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    #addTaskBtn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+    /* ========================= GRID ========================= */
+    .month-grid-wrapper {
+      border-radius: 12px;
+      overflow-x: auto;
+      padding: 8px;
+      background: var(--bg-grid, var(--bg-main));
+    }
+
+    /* KEY FIX: today uses --primary, not hardcoded #4CAF50 */
+    .grid-cell.today {
+      background: color-mix(in srgb, var(--primary, #4CAF50) 25%, transparent) !important;
+      box-shadow: inset 0 0 0 2px var(--primary, #4CAF50) !important;
+      font-weight: 700;
+    }
+
+    .grid-header .grid-cell.today {
+      background: color-mix(in srgb, var(--primary, #4CAF50) 40%, transparent) !important;
+    }
+
+    .grid-cell:hover:not(.locked) {
+      opacity: 0.8;
+      transform: scale(1.04);
+    }
+
+    .grid-cell.locked {
+      opacity: 0.22;
+      cursor: not-allowed;
+    }
+
+    /* ========================= MONTH NAV ========================= */
+    .month-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 12px 0 4px;
+    }
+
+    .month-nav button {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft, #ccc);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      color: var(--text-main);
+      font-size: 0.8rem;
+      transition: background 0.2s;
+    }
+
+    .month-nav button:hover,
+    .month-nav button.active {
+      background: var(--primary, #4CAF50);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    /* ========================= PROGRESS CHART ========================= */
+    .progress-chart-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .progress-chart { flex: 1; min-width: 280px; }
+    .progress-chart h3 { margin: 0 0 8px; font-size: 0.9rem; color: var(--text-muted); }
+
+    #progressLine { width: 100%; height: 160px; display: block; }
+
+    /* ========================= DAILY RING ========================= */
+    .daily-ring {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      flex-shrink: 0;
+    }
+
+    .daily-ring svg { transform: rotate(-90deg); }
+
+    .ring-bg {
+      fill: none;
+      stroke: var(--border-soft, #2a2a2a);
+      stroke-width: 12;
+    }
+
+    /* KEY FIX: ring stroke uses --primary */
+    .ring-progress {
+      fill: none;
+      stroke: var(--primary, #4CAF50);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 314;
+      stroke-dashoffset: 314;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .ring-text span {
+      font-size: 1.4rem;
+      animation: text-pulse 1.5s infinite ease-in-out;
+    }
+
+    .ring-text small { font-size: 0.72rem; opacity: 0.6; }
+
+    @keyframes text-pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* ========================= MODAL ========================= */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.hidden { display: none; }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-box {
+      position: relative;
+      width: 90%;
+      max-width: 420px;
+      background: var(--bg-panel, #0f0f18);
+      color: var(--text-main);
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: modalPop 0.2s ease;
+    }
+
+    .modal-box h2 { margin: 0 0 16px; font-size: 1.15rem; }
+
+    .modal-box label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .modal-box input,
+    .modal-box select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 14px;
+      background: var(--bg-grid, #111);
+      border: 1px solid var(--border-soft, #333);
+      color: var(--text-main);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .modal-actions button {
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .modal-actions .primary {
+      background: var(--primary, #4CAF50);
+      color: #fff;
+    }
+
+    #cancelHabit {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-soft) !important;
+    }
+
+    #weeklyPicker label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 4px 8px 4px 0;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: var(--text-main);
+    }
+
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.94); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ========================= LEAGUES ========================= */
+    #leaguePanel {
+      margin-bottom: 12px;
+    }
+
+    .league-wrapper {
+      background: var(--bg-card, #181b22);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .league-icon-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .league-emblem {
+      font-size: 2.4rem;
+      line-height: 1;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+    }
+
+    .league-info {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .league-name {
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .league-sub {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .league-xp-track {
+      width: 100%;
+      height: 6px;
+      background: var(--border-soft);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .league-xp-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.5s ease;
+    }
+
+    .league-xp-label {
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Leaderboard rows */
+    .league-board {
+      flex: 2;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .league-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      transition: background 0.2s;
+    }
+
+    .league-row.is-you {
+      background: color-mix(in srgb, var(--primary,#4CAF50) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary,#4CAF50) 40%, transparent);
+      font-weight: 700;
+    }
+
+    .league-rank {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      width: 18px;
+      text-align: center;
+    }
+
+    .league-row:nth-child(1) .league-rank { color: #facc15; }
+    .league-row:nth-child(2) .league-rank { color: #94a3b8; }
+    .league-row:nth-child(3) .league-rank { color: #b45309; }
+
+    .league-avatar {
+      font-size: 1.1rem;
+    }
+
+    .league-player-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .league-player-xp {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .league-reset {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      margin-top: 6px;
+      text-align: right;
+      width: 100%;
+    }
+
+    /* league-pill replaces old #leagueBadge styles */
+
+    /* ========================= LEAGUES ========================= */
+    @keyframes fadeInOverlay  { from{opacity:0} to{opacity:1} }
+    @keyframes fadeOutOverlay { from{opacity:1} to{opacity:0} }
+    @keyframes leaguePopIn {
+      0%   { transform: scale(0.4) translateY(40px); opacity:0; }
+      70%  { transform: scale(1.08) translateY(-6px); opacity:1; }
+      100% { transform: scale(1) translateY(0); opacity:1; }
+    }
+    @keyframes leagueModalIn {
+      0%   { transform: scale(0.92) translateY(24px); opacity:0; }
+      100% { transform: scale(1) translateY(0); opacity:1; }
+    }
+    @keyframes leaguePulse {
+      0%,100% { box-shadow: 0 0 0 0 var(--tier-color,transparent); }
+      50%      { box-shadow: 0 0 0 8px color-mix(in srgb, var(--tier-color,transparent) 30%, transparent); }
+    }
+
+    /* league-pill CSS handles styling */
+
+    /* ── MODAL INTERNALS ── */
+    .lm-hero {
+      text-align: center;
+      padding: 16px 0 24px;
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 24px;
+    }
+    .lm-emblem { font-size: 4rem; line-height: 1; margin-bottom: 8px; }
+    .lm-league-name { font-size: 1.8rem; font-weight: 900; margin-bottom: 4px; }
+    .lm-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+    .lm-xp-wrap { margin: 14px 0 4px; }
+    .lm-xp-track {
+      width: 100%; height: 10px;
+      background: var(--border-soft);
+      border-radius: 10px; overflow: hidden;
+    }
+    .lm-xp-fill {
+      height: 100%; border-radius: 10px;
+      transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .lm-xp-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; text-align: center; }
+
+    /* Tier track */
+    .lm-tier-track {
+      display: flex; gap: 6px; margin: 20px 0;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .lm-tier {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 8px 6px; border-radius: 10px; border: 1px solid transparent;
+      min-width: 54px; flex-shrink: 0; cursor: default;
+      transition: all 0.3s; position: relative;
+    }
+    .lm-tier.tier-unlocked {
+      border-color: color-mix(in srgb, var(--tier-color) 50%, transparent);
+      background: color-mix(in srgb, var(--tier-color) 10%, transparent);
+    }
+    .lm-tier.tier-current {
+      border-color: var(--tier-color);
+      background: color-mix(in srgb, var(--tier-color) 18%, transparent);
+      animation: leaguePulse 2s ease-in-out infinite;
+    }
+    .lm-tier.tier-locked { opacity: 0.28; filter: grayscale(1); }
+    .lm-tier.tier-mystery { opacity: 0.12; filter: grayscale(1) blur(2px); }
+    .lm-tier-emoji { font-size: 1.5rem; line-height: 1; }
+    .lm-tier-name { font-size: 0.58rem; font-weight: 800; color: var(--tier-color,var(--text-muted)); text-align: center; }
+    .lm-tier-xp   { font-size: 0.52rem; color: var(--text-muted); }
+    .lm-tier-you  {
+      position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+      background: var(--tier-color); color: #000;
+      font-size: 0.48rem; font-weight: 900; padding: 1px 5px;
+      border-radius: 6px; white-space: nowrap; letter-spacing: 0.06em;
+    }
+
+    /* Leaderboard */
+    .lm-board-title {
+      font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted); margin: 20px 0 10px;
+    }
+    .lm-board { display: flex; flex-direction: column; gap: 6px; }
+    .lm-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 10px;
+      font-size: 0.82rem; border: 1px solid transparent;
+      transition: background 0.2s;
+    }
+    .lm-row.is-you {
+      background: color-mix(in srgb, var(--primary,#4CAF50) 12%, transparent);
+      border-color: color-mix(in srgb, var(--primary,#4CAF50) 40%, transparent);
+      font-weight: 700;
+    }
+    .lm-rank { font-size:0.72rem; font-weight:800; width:22px; text-align:center; color:var(--text-muted); }
+    .lm-row:nth-child(1) .lm-rank { color:#facc15; font-size:1rem; }
+    .lm-row:nth-child(2) .lm-rank { color:#94a3b8; font-size:0.9rem; }
+    .lm-row:nth-child(3) .lm-rank { color:#b45309; font-size:0.85rem; }
+    .lm-avatar { font-size: 1.3rem; }
+    .lm-name   { flex: 1; }
+    .lm-xp     { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+    .lm-reset  { font-size: 0.65rem; color: var(--text-muted); opacity: 0.55; text-align: right; margin-top: 10px; }
+
+    /* ========================= DAILY QUESTS ========================= */
+    /* ── MOOD WIDGET ── */
+    .mood-widget {
+      background: var(--card, #1a1a2e);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .mood-prompt {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted, #9aa4b2);
+      margin-bottom: 8px;
+    }
+    .mood-options { display: flex; gap: 8px; }
+    .mood-btn {
+      background: none; border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 10px; font-size: 1.4rem; padding: 4px 8px;
+      cursor: pointer; transition: all 0.15s; flex: 1;
+    }
+    .mood-btn:hover { background: var(--primary-dim, rgba(76,175,80,0.15)); border-color: var(--primary, #4CAF50); transform: scale(1.1); }
+    .mood-today { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .mood-today-emoji { font-size: 1.5rem; }
+    .mood-today-label { font-size: 0.88rem; }
+    .mood-change-btn { background: none; border: none; color: var(--text-muted, #9aa4b2); cursor: pointer; font-size: 0.9rem; margin-left: auto; }
+    .mood-note-preview { font-size: 0.72rem; color: var(--text-muted, #9aa4b2); font-style: italic; margin-top: 4px; }
+    .mood-note-input {
+      width: 100%; background: var(--bg, #0c0c14);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 8px; color: var(--text, #f0f0f8);
+      font-size: 0.82rem; padding: 7px 10px; outline: none; font-family: inherit;
+    }
+    .mood-note-input:focus { border-color: var(--primary, #4CAF50); }
+    .mood-save-btn {
+      flex: 1; background: var(--primary, #4CAF50); color: #fff;
+      border: none; border-radius: 8px; padding: 7px; font-weight: 700; font-size: 0.78rem; cursor: pointer;
+    }
+    .mood-cancel-btn {
+      background: var(--card, #1a1a2e); color: var(--text-muted, #9aa4b2);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 0.78rem; cursor: pointer;
+    }
+
+    @keyframes moodFadeIn    { from { opacity:0; } to { opacity:1; } }
+    @keyframes moodFadeOut   { from { opacity:1; } to { opacity:0; } }
+    @keyframes moodSlideUp   { from { transform:translateY(100%); } to { transform:translateY(0); } }
+
+    #moodPopupCard button:hover { opacity: 0.85; }
+    #moodPopupBtns button:hover {
+      border-color: var(--primary, #4CAF50) !important;
+      transform: translateY(-2px);
+    }
+
+    /* ── COACH PANEL ── */
+    .coach-card {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05));
+      border: 1px solid rgba(251,191,36,0.25);
+      border-radius: 16px; padding: 14px 16px;
+      margin-bottom: 14px; animation: cardIn 0.3s ease;
+      box-shadow: 0 4px 16px rgba(251,191,36,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+      position: relative; overflow: hidden;
+    }
+    .coach-card::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: linear-gradient(to bottom, #fbbf24, #f59e0b);
+      border-radius: 3px 0 0 3px;
+    }
+    .coach-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+    .coach-body { flex: 1; }
+    .coach-msg  { font-size: 0.82rem; line-height: 1.5; color: var(--text, #f0f0f8); font-weight: 500; }
+    .coach-action {
+      margin-top: 8px; background: rgba(251,191,36,0.15);
+      border: 1px solid rgba(251,191,36,0.35); color: #fbbf24;
+      border-radius: 10px; padding: 5px 12px; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+      transition: all 0.2s; display: inline-block;
+    }
+    .coach-action:hover { background: rgba(251,191,36,0.25); transform: translateY(-1px); }
+    .coach-dismiss {
+      background: none; border: none; color: var(--text-muted, #9aa4b2);
+      cursor: pointer; font-size: 0.85rem; flex-shrink: 0; opacity: 0.6;
+      transition: opacity 0.2s; padding: 2px 4px;
+    }
+    .coach-dismiss:hover { opacity: 1; }
+
+    /* ── SEASONAL BANNER ── */
+    .season-inner { display: flex; align-items: center; gap: 14px; padding: 13px 18px; }
+    .season-emoji {
+      font-size: 1.8rem; flex-shrink: 0;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+      animation: byteFloat 3s ease-in-out infinite;
+    }
+    .season-info  { flex: 1; }
+    .season-name  { font-size: 0.88rem; font-weight: 900; letter-spacing: 0.01em; }
+    .season-desc  { font-size: 0.7rem; color: var(--text-muted, #9aa4b2); margin-top: 3px; }
+    .season-claim-btn {
+      background: transparent; border: 1.5px solid;
+      border-radius: 12px; padding: 6px 14px;
+      font-size: 0.76rem; font-weight: 800; cursor: pointer; white-space: nowrap;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .season-claim-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+    .season-claimed {
+      font-size: 0.72rem; color: var(--text-muted, #9aa4b2);
+      white-space: nowrap; display: flex; align-items: center; gap: 5px;
+    }
+
+    /* ── FREEZE BADGE ── */
+    .freeze-task-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.8rem; padding: 0 2px;
+      opacity: 0.6; transition: opacity 0.2s, transform 0.15s;
+    }
+    .freeze-task-btn:hover { opacity: 1; transform: scale(1.2); }
+
+    .freeze-badge {
+      font-size: 0.7rem; margin-left: 4px;
+      vertical-align: middle; cursor: default;
+    }
+
+    #questsPanel {
+      margin-bottom: 12px;
+    }
+
+    .quests-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .quests-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quests-refresh {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .quests-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .quest-card {
+      background: linear-gradient(135deg, var(--bg-card, #181b22), rgba(255,255,255,0.015));
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .quest-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .quest-card:not(.quest-done):hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .quest-card.quest-done {
+      border-color: rgba(74,222,128,0.4);
+      opacity: 0.75;
+    }
+
+    .quest-card.quest-done::after {
+      content: "✓";
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 0.75rem;
+      color: var(--done, #4ade80);
+      font-weight: 800;
+      background: none;
+      inset: unset;
+    }
+
+    .quest-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .quest-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .quest-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .quest-desc {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .quest-reward {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .quest-progress-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border-soft);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .quest-progress-fill {
+      height: 100%;
+      background: var(--primary, #4CAF50);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    /* ========================= WEEK STRIP ========================= */
+    #weekStrip {
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .week-strip-week {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      min-width: 36px;
+    }
+
+    /* Separator between weeks */
+    .week-strip-week + .week-strip-week {
+      border-left: 1px solid var(--border-soft);
+      padding-left: 6px;
+      margin-left: 2px;
+    }
+
+    .week-strip-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .week-strip-days {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+    }
+
+    .week-strip-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .week-strip-bar-wrap {
+      width: 18px;
+      height: 40px;
+      background: var(--border-soft);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .week-strip-bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.4s ease;
+      /* colour set inline per bar */
+    }
+
+    .week-strip-day-label {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .week-strip-day.is-today .week-strip-bar-wrap {
+      box-shadow: 0 0 0 2px var(--primary, #4CAF50);
+    }
+
+    .week-strip-day.is-today .week-strip-day-label {
+      color: var(--primary, #4CAF50);
+      font-weight: 800;
+    }
+
+    .week-strip-avg {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 2px;
+    }
+
+    .week-strip-empty {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      padding: 8px 4px;
+    }
+
+    /* ========================= YEARLY HEAT MAP ========================= */
+    #heatmapSection {
+      margin-top: 28px;
+    }
+
+    .heatmap-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .heatmap-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .heatmap-year-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .heatmap-year-btn {
+      background: var(--bg-card, #1f1f1f);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .heatmap-year-btn:hover { background: var(--primary, #4CAF50); color: #fff; border-color: transparent; }
+
+    .heatmap-year-label {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--text-main);
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .heatmap-stats-row {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .heatmap-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .heatmap-stat label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .heatmap-stat strong {
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+
+    .heatmap-scroll {
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .heatmap-grid-wrap {
+      display: flex;
+      gap: 0;
+      min-width: max-content;
+    }
+
+    /* Day-of-week labels on the left */
+    .heatmap-dow-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-top: 20px; /* aligns with month labels */
+      margin-right: 4px;
+    }
+
+    .heatmap-dow {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      height: 11px;
+      line-height: 11px;
+      width: 18px;
+      text-align: right;
+    }
+
+    .heatmap-columns {
+      display: flex;
+      flex-direction: row;
+      gap: 2px;
+    }
+
+    .heatmap-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .heatmap-month-label {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      height: 16px;
+      line-height: 16px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .heatmap-cell {
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+      position: relative;
+    }
+
+    .heatmap-cell:hover {
+      transform: scale(1.4);
+      z-index: 10;
+    }
+
+    .heatmap-cell.hm-empty   { background: var(--border-soft); opacity: 0.4; }
+    .heatmap-cell.hm-future  { background: var(--border-soft); opacity: 0.15; }
+    .heatmap-cell.hm-level0  { background: var(--border-soft); }
+    .heatmap-cell.hm-level1  { background: color-mix(in srgb, var(--done, #4ade80) 30%, var(--border-soft)); }
+    .heatmap-cell.hm-level2  { background: color-mix(in srgb, var(--done, #4ade80) 55%, var(--border-soft)); }
+    .heatmap-cell.hm-level3  { background: color-mix(in srgb, var(--done, #4ade80) 80%, var(--border-soft)); }
+    .heatmap-cell.hm-level4  { background: var(--done, #4ade80); }
+    .heatmap-cell.hm-perfect { background: var(--done, #4ade80); box-shadow: 0 0 4px var(--done, #4ade80); }
+    .heatmap-cell.hm-today   { outline: 2px solid var(--primary, #4CAF50); outline-offset: 1px; }
+
+    /* Tooltip on hover */
+    .heatmap-cell::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      font-size: 0.65rem;
+      white-space: nowrap;
+      padding: 3px 7px;
+      border-radius: 5px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 999;
+    }
+
+    .heatmap-cell:hover::after { opacity: 1; }
+
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 10px;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      justify-content: flex-end;
+    }
+
+    .hm-legend-cell {
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+    }
+
+    /* ========================= HABIT STRENGTH ========================= */
+    .strength-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.58rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 5px;
+      cursor: help;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+    .strength-strong  { background: color-mix(in srgb,#4ade80 18%,transparent); color:#4ade80; border:1px solid #4ade8044; }
+    .strength-fragile { background: color-mix(in srgb,#facc15 18%,transparent); color:#facc15; border:1px solid #facc1544; }
+    .strength-at-risk { background: color-mix(in srgb,#f87171 18%,transparent); color:#f87171; border:1px solid #f8717144; animation: pulse-risk 1.5s ease infinite; }
+    @keyframes pulse-risk { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    /* ========================= HABIT NOTES ========================= */
+    .cell-note-dot {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #818cf8;
+      pointer-events: none;
+    }
+    .grid-cell.status { position: relative; }
+
+    #noteModal {
+      position: fixed; inset: 0; z-index: 99997;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(5px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #noteModal.hidden { display: none; }
+    .note-modal-box {
+      background: var(--bg-panel,#121212);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 22px 24px;
+      width: min(420px, 92vw);
+      animation: leagueModalIn 0.3s ease;
+    }
+    .note-modal-title {
+      font-size: 0.8rem; font-weight: 800;
+      color: var(--text-muted); margin-bottom: 12px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    #noteTextarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-card,#1a1a2e);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      padding: 10px 12px;
+      resize: vertical; min-height: 90px;
+      font-family: inherit;
+      outline: none;
+    }
+    #noteTextarea:focus { border-color: var(--primary,#4CAF50); }
+    .note-modal-actions {
+      display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end;
+    }
+    .note-btn {
+      padding: 7px 18px; border-radius: 10px; font-weight: 700;
+      font-size: 0.82rem; cursor: pointer; border: none;
+    }
+    .note-btn-cancel { background: var(--border-soft); color: var(--text-muted); }
+    .note-btn-save   { background: var(--primary,#4CAF50); color: #fff; }
+    .note-btn-delete { background: color-mix(in srgb,#f87171 20%,transparent); color:#f87171; border:1px solid #f8717144; }
+
+    /* ========================= SOUNDS TOGGLE ========================= */
+    .sound-toggle {
+      background: var(--bg-card,#1a1a2e);
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .sound-toggle:hover, .sound-toggle.active {
+      border-color: var(--primary,#4CAF50);
+      color: var(--primary,#4CAF50);
+    }
+
+    /* ========================= REFLECTION MODE ========================= */
+    #reflectionModal {
+      position: fixed; inset: 0; z-index: 99996;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #reflectionModal.hidden { display: none; }
+    .reflection-box {
+      background: var(--bg-panel,#121212);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      padding: 30px 28px;
+      width: min(520px, 94vw);
+      animation: leagueModalIn 0.4s ease;
+    }
+    .reflection-header {
+      text-align: center; margin-bottom: 24px;
+    }
+    .reflection-title {
+      font-size: 1.4rem; font-weight: 900;
+      color: var(--primary,#4CAF50); margin-bottom: 4px;
+    }
+    .reflection-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .reflection-q {
+      margin-bottom: 18px;
+    }
+    .reflection-q label {
+      display: block; font-size: 0.8rem; font-weight: 700;
+      color: var(--text-main); margin-bottom: 6px;
+    }
+    .reflection-q textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-card,#1a1a2e);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px; color: var(--text-main);
+      font-size: 0.85rem; padding: 10px 12px;
+      resize: vertical; min-height: 70px;
+      font-family: inherit; outline: none;
+    }
+    .reflection-q textarea:focus { border-color: var(--primary,#4CAF50); }
+    .reflection-stats {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      background: var(--bg-card,#1a1a2e);
+      border-radius: 12px; padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .refl-stat { flex: 1; min-width: 80px; text-align: center; }
+    .refl-stat-val { font-size: 1.4rem; font-weight: 900; }
+    .refl-stat-lbl { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; }
+    .reflection-save-btn {
+      width: 100%; padding: 12px; border-radius: 12px;
+      background: var(--primary,#4CAF50); color: #fff;
+      font-size: 0.95rem; font-weight: 800; border: none; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .reflection-save-btn:hover { opacity: 0.85; }
+
+    /* ========================= SHARE CARD ========================= */
+    #shareCardModal {
+      position: fixed; inset: 0; z-index: 99995;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #shareCardModal.hidden { display: none; }
+    .share-modal-box {
+      background: var(--bg-panel,#121212);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px; padding: 24px;
+      width: min(460px, 94vw);
+      animation: leagueModalIn 0.35s ease;
+    }
+    #shareCanvas {
+      width: 100%; border-radius: 12px;
+      display: block; margin-bottom: 14px;
+    }
+    .share-actions { display: flex; gap: 10px; }
+    .share-btn {
+      flex: 1; padding: 10px; border-radius: 10px;
+      font-weight: 700; font-size: 0.85rem;
+      border: none; cursor: pointer;
+    }
+    .share-btn-dl { background: var(--primary,#4CAF50); color:#fff; }
+    .share-btn-cl { background: var(--border-soft); color: var(--text-muted); }
+
+    /* ========================= BADGE UNLOCK ANIMATION ========================= */
+    @keyframes badgePopIn {
+      0%   { transform: translate(-50%,-50%) scale(0.2) rotate(-15deg); opacity:0; }
+      60%  { transform: translate(-50%,-50%) scale(1.1) rotate(3deg); opacity:1; }
+      80%  { transform: translate(-50%,-50%) scale(0.95) rotate(-1deg); }
+      100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+    }
+    @keyframes badgeGlow {
+      0%,100% { box-shadow: 0 0 0 0 var(--badge-color); }
+      50%      { box-shadow: 0 0 40px 10px var(--badge-color); }
+    }
+    @keyframes badgeShine {
+      0%   { left: -100%; }
+      100% { left: 200%; }
+    }
+    @keyframes easterEggDrop {
+      0%   { transform: translateY(-60px) rotate(-10deg); opacity:0; }
+      60%  { transform: translateY(8px) rotate(3deg); opacity:1; }
+      100% { transform: translateY(0) rotate(0); opacity:1; }
+    }
+    @keyframes rainbowShift {
+      0%   { filter: hue-rotate(0deg);   }
+      100% { filter: hue-rotate(360deg); }
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0)    scale(1);   opacity:1; }
+      100% { transform: translateY(-80px) scale(0.5); opacity:0; }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-6px) rotate(-2deg); }
+      40%     { transform: translateX(6px)  rotate(2deg); }
+      60%     { transform: translateX(-4px); }
+      80%     { transform: translateX(4px); }
+    }
+
+    #badgeUnlockOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999997;
+      pointer-events: none;
+    }
+
+    .badge-unlock-card {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      background: var(--bg-panel, #121212);
+      border: 2px solid var(--badge-color, #facc15);
+      border-radius: 20px;
+      padding: 28px 36px;
+      text-align: center;
+      min-width: 260px;
+      pointer-events: all;
+      animation: badgePopIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards,
+                 badgeGlow  1.4s ease-in-out 0.6s 3;
+      overflow: hidden;
+    }
+
+    .badge-unlock-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      animation: badgeShine 1s ease 0.5s;
+    }
+
+    .badge-unlock-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      pointer-events: all;
+    }
+
+    /* ========================= COMBO TOAST ========================= */
+    .combo-toast {
+      border-color: #facc15 !important;
+      animation: combo-appear 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes combo-appear {
+      0%   { transform: translateX(-50%) scale(0.7); opacity:0; }
+      100% { transform: translateX(-50%) scale(1);   opacity:1; }
+    }
+
+    .combo-counter {
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ========================= GEM SYSTEM ========================= */
+
+    /* Save streak button */
+    .nav-btn.save-streak {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: #fff;
+      border-color: transparent;
+      animation: gem-glow 2s ease-in-out infinite;
+    }
+
+    .nav-btn.save-streak:hover {
+      background: linear-gradient(135deg, #c084fc, #a855f7);
+    }
+
+    @keyframes gem-glow {
+      0%,100% { box-shadow: 0 0 8px rgba(168,85,247,0.4); }
+      50%      { box-shadow: 0 0 20px rgba(168,85,247,0.8); }
+    }
+
+    /* Gem toast */
+    .gem-toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, var(--bg-card), rgba(168,85,247,0.06));
+      border: 1px solid rgba(168,85,247,0.5);
+      border-radius: 16px;
+      padding: 13px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45),
+                  0 0 0 1px rgba(168,85,247,0.15),
+                  0 0 24px rgba(168,85,247,0.2);
+      white-space: nowrap;
+    }
+
+    .gem-toast-icon {
+      font-size: 1.5rem;
+    }
+
+    /* ========================= GRAPH LEGEND ========================= */
+    .graph-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Dashed line for weekly avg */
+    .legend-dash {
+      width: 18px;
+      height: 2px;
+      flex-shrink: 0;
+      background: var(--primary, #4CAF50);
+      /* mimic the dashed stroke */
+      background-image: repeating-linear-gradient(
+        to right,
+        var(--primary, #4CAF50) 0, var(--primary, #4CAF50) 6px,
+        transparent 6px, transparent 9px
+      );
+      background-color: transparent;
+    }
+
+    /* ========================= PERFECT DAY ========================= */
+
+    /* Column header glow for perfect days */
+    .grid-cell.perfect-day {
+      background: color-mix(in srgb, var(--done, #4ade80) 30%, transparent) !important;
+      color: var(--done, #4ade80);
+      font-weight: 800;
+      position: relative;
+    }
+
+    .perfect-star {
+      display: block;
+      font-size: 0.55rem;
+      line-height: 1;
+      margin-top: 1px;
+    }
+
+    /* Ring glow when today is 100% */
+    .perfect-ring {
+      filter: drop-shadow(0 0 10px var(--done, #4ade80))
+              drop-shadow(0 0 24px var(--done, #4ade80));
+      animation: perfect-ring-pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes perfect-ring-pulse {
+      0%,100% { filter: drop-shadow(0 0 8px var(--done, #4ade80)); }
+      50%      { filter: drop-shadow(0 0 22px var(--done, #4ade80))
+                         drop-shadow(0 0 40px var(--done, #4ade80)); }
+    }
+
+    /* Perfect Day Toast */
+    .perfect-toast {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, var(--bg-card), rgba(74,222,128,0.06));
+      border: 1px solid rgba(74,222,128,0.5);
+      border-radius: 16px;
+      padding: 14px 22px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.45),
+                  0 0 0 1px rgba(74,222,128,0.2),
+                  0 0 28px rgba(74,222,128,0.18);
+      white-space: nowrap;
+    }
+
+    .toast-icon {
+      font-size: 1.8rem;
+      animation: toast-spin 0.6s ease;
+    }
+
+    @keyframes toast-spin {
+      from { transform: rotate(-30deg) scale(0.5); }
+      to   { transform: rotate(0deg)   scale(1); }
+    }
+
+    .perfect-toast strong {
+      display: block;
+      font-size: 1rem;
+      color: var(--done, #4ade80);
+    }
+
+    .toast-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ========================= WARNING GLOW ========================= */
+
+    /* Pulsing amber/red glow on unmarked today-cells after 23:00 */
+    @keyframes warning-pulse {
+      0%   { box-shadow: inset 0 0 0 2px rgba(255, 160, 0, 0.6),
+                         0 0 8px  rgba(255, 160, 0, 0.3); }
+      50%  { box-shadow: inset 0 0 0 2px rgba(255, 60,  0, 0.9),
+                         0 0 18px rgba(255, 60,  0, 0.6); }
+      100% { box-shadow: inset 0 0 0 2px rgba(255, 160, 0, 0.6),
+                         0 0 8px  rgba(255, 160, 0, 0.3); }
+    }
+
+    .grid-cell.warning {
+      animation: warning-pulse 1.4s ease-in-out infinite;
+      background: rgba(255, 120, 0, 0.12) !important;
+      color: #ffb300;
+      font-weight: 700;
+      position: relative;
+    }
+
+    /* Small clock icon top-right of warning cell */
+    .grid-cell.warning::after {
+      content: "⏰";
+      position: absolute;
+      top: 1px;
+      right: 2px;
+      font-size: 0.5rem;
+      line-height: 1;
+      opacity: 0.85;
+    }
+
+    /* ========================= INSIGHTS PANEL ========================= */
+    .insights-panel {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .insight-card {
+      background: linear-gradient(145deg, var(--bg-card, #181b22), rgba(255,255,255,0.01));
+      border: 1px solid var(--border-soft, #2a2a2a);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .insight-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    /* Left accent bar — colour set inline per card */
+    .insight-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: var(--card-accent, var(--primary, #4CAF50));
+      border-radius: 4px 0 0 4px;
+    }
+
+    .insight-icon {
+      font-size: 1.3rem;
+      line-height: 1;
+    }
+
+    .insight-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .insight-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .insight-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Empty state */
+    .insights-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 24px;
+      opacity: 0.6;
+    }
+
+    /* ========================= FOOTER ========================= */
+    .app-footer {
+      margin-top: 2.5rem;
+      border-top: 1px solid var(--border-soft);
+      background: color-mix(in srgb, var(--bg-panel) 80%, var(--bg-main));
+    }
+    .footer-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: var(--text-main);
+    }
+    .footer-logo { font-size: 1rem; }
+    .footer-name { letter-spacing: 0.03em; }
+    .footer-copy {
+      flex: 1;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .footer-copy { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.01em; }
+    .footer-copy strong { color: var(--primary); font-weight: 800; }
+    .footer-heart { color: #f87171; }
+    .footer-dot { opacity: 0.35; margin: 0 6px; }
+    .footer-version {
+      font-size: 0.58rem;
+      font-weight: 800;
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+      color: var(--primary);
+      border-radius: 6px;
+      padding: 2px 7px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .footer-inner { gap: 12px; flex-wrap: wrap; }
+    .footer-links {
+      display: flex;
+      gap: 12px;
+    }
+    .footer-links a {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--primary); }
+
+
+  /* ── FREE PLAN — premium feature lock visuals ── */
+  .premium-locked {
+    position: relative;
+    pointer-events: none;
+    user-select: none;
+  }
+  .premium-locked::after {
+    content: "⭐ PREMIUM";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: #f59e0b;
+    border-radius: inherit;
+    cursor: pointer;
+    pointer-events: all;
+  }
+  .premium-locked.clickable-lock {
+    pointer-events: all;
+    cursor: pointer;
+  }
+
+  /* ── Light theme — full contrast overrides ── */
+  body[data-theme="light"] {
+    --text-main: #111827;
+    --text-muted: #4b5563;
+    --bg-panel: #f0f4f1;
+    --bg-card: #e8ede9;
+    --border: rgba(0,0,0,0.1);
+    --border-soft: rgba(0,0,0,0.07);
+  }
+  body[data-theme="light"] .month-header,
+  body[data-theme="light"] .header-content { background: #edf2ee; border-bottom: 1px solid rgba(0,0,0,0.09); }
+  body[data-theme="light"] .month-stats {
+    background: #e2e9e3;
+    border: 1px solid rgba(22,163,74,0.25);
+    border-radius: 14px; padding: 4px 8px;
+  }
+  body[data-theme="light"] .month-stats .stat { border-right: 1px solid rgba(0,0,0,0.08); }
+  body[data-theme="light"] .month-stats .stat:last-child { border-right: none; }
+  body[data-theme="light"] .month-stats .stat label { color: #4b5563; font-weight: 700; }
+  body[data-theme="light"] .month-stats .stat strong { color: #111827; }
+  body[data-theme="light"] .streak-stat #dailyStreak,
+  body[data-theme="light"] .streak-stat strong { color: #15803d !important; }
+  body[data-theme="light"] .streak-num { background: rgba(22,163,74,0.15); border-color: rgba(22,163,74,0.4); }
+  body[data-theme="light"] .league-pill {
+    border-color: rgba(22,163,74,0.5); color: #15803d;
+    background: linear-gradient(145deg, rgba(22,163,74,0.15), rgba(22,163,74,0.07));
+    box-shadow: 0 1px 4px rgba(22,163,74,0.15);
+  }
+  body[data-theme="light"] .nav-btn { background: #16a34a; color: #fff !important; border-color: #16a34a; }
+  body[data-theme="light"] .nav-btn:hover { background: #15803d; border-color: #15803d; }
+  /* Yellow theme nav buttons: dark text on bright yellow background */
+  body[data-theme="yellow"] .nav-btn { background: rgba(251,191,36,0.18); color: #fef9c3 !important; border-color: rgba(251,191,36,0.35); }
+  body[data-theme="yellow"] .nav-btn:hover { background: rgba(251,191,36,0.85); color: #000 !important; border-color: #fbbf24; }
+  /* Army theme: keep text visible */
+  body[data-theme="army"] .nav-btn { background: rgba(132,204,22,0.15); color: #d9f0d9 !important; border-color: rgba(132,204,22,0.3); }
+  body[data-theme="army"] .nav-btn:hover { background: rgba(132,204,22,0.8); color: #000 !important; }
+  body[data-theme="light"] .grid-wrapper,
+  body[data-theme="light"] .month-grid-wrapper { background: #edf2ee; }
+  body[data-theme="light"] .grid-cell { background: #dde6de; border-color: rgba(0,0,0,0.09); color: #374151; }
+  body[data-theme="light"] .grid-cell.done { background: #bbf7d0; border-color: #86efac; color: #15803d; }
+  body[data-theme="light"] .grid-cell.failed { background: #fecaca; border-color: #fca5a5; color: #dc2626; }
+  body[data-theme="light"] .grid-cell.unmarked { background: #dde6de; }
+  body[data-theme="light"] .task-name,
+  body[data-theme="light"] .task-label-cell { color: #111827; background: #edf2ee; border-right: 1px solid rgba(0,0,0,0.09); }
+  body[data-theme="light"] .progress-section,
+  body[data-theme="light"] .daily-ring-section { background: #edf2ee; }
+  body[data-theme="light"] .app-footer { background: #e2e9e3; border-top: 1px solid rgba(22,163,74,0.15); }
+  body[data-theme="light"] .footer-copy,
+  body[data-theme="light"] .footer-links a { color: #4b5563; }
+  body[data-theme="light"] .footer-brand { color: #111827; }
+  /* Byte bubble readable on light */
+  body[data-theme="light"] #byteBubble { background: #1a2b1e !important; }
+  body[data-theme="light"] #byteTutorialOverlay .tut-card { background: #1a2b1e; }
+  
+  /* ── LIGHT MODE: Coach, Seasonal, Insights, Toasts ── */
+  body[data-theme="light"] .coach-card {
+    background: linear-gradient(135deg, rgba(217,119,6,0.08), rgba(245,158,11,0.05));
+    border-color: rgba(217,119,6,0.25);
+    box-shadow: 0 2px 12px rgba(217,119,6,0.08);
+  }
+  body[data-theme="light"] .coach-msg { color: #1f2937; }
+  body[data-theme="light"] .coach-dismiss { color: #6b7280; }
+  body[data-theme="light"] .coach-action { color: #b45309; border-color: rgba(180,83,9,0.3); background: rgba(217,119,6,0.1); }
+
+  body[data-theme="light"] #seasonalBanner {
+    background: linear-gradient(135deg, rgba(22,163,74,0.1), rgba(16,185,129,0.06)) !important;
+    border-color: rgba(22,163,74,0.3) !important;
+  }
+  body[data-theme="light"] .season-name { color: #15803d; }
+  body[data-theme="light"] .season-desc { color: #4b5563; }
+  body[data-theme="light"] .season-claim-btn { color: #15803d !important; border-color: #16a34a !important; }
+  body[data-theme="light"] .season-claim-btn:hover { background: rgba(22,163,74,0.12) !important; }
+  body[data-theme="light"] .season-claimed { color: #4b5563; }
+
+  body[data-theme="light"] .insight-card {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  body[data-theme="light"] .insight-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  body[data-theme="light"] .insight-value { color: #111827; }
+  body[data-theme="light"] .insight-label { color: #6b7280; }
+  body[data-theme="light"] .insight-sub { color: #4b5563; }
+
+  body[data-theme="light"] .gem-toast {
+    background: #fff;
+    border-color: rgba(168,85,247,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 12px rgba(168,85,247,0.15);
+    color: #1f2937;
+  }
+  body[data-theme="light"] .perfect-toast {
+    background: #fff;
+    border-color: rgba(22,163,74,0.5);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 12px rgba(22,163,74,0.15);
+    color: #1f2937;
+  }
+  body[data-theme="light"] .perfect-toast strong { color: #15803d; }
+  body[data-theme="light"] .toast-sub { color: #4b5563; }
+
+  body[data-theme="light"] .quest-card {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  body[data-theme="light"] .quest-card:not(.quest-done):hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+  body[data-theme="light"] .quest-name { color: #111827; }
+  body[data-theme="light"] .quest-desc { color: #4b5563; }
+  body[data-theme="light"] .heatmap-cell { border-color: rgba(0,0,0,0.07); }
+  body[data-theme="light"] .heatmap-year-label { color: #1f2937; }
+  body[data-theme="light"] .heatmap-year-btn { color: #374151; border-color: rgba(0,0,0,0.12); background: rgba(0,0,0,0.04); }
+  body[data-theme="light"] .heatmap-stat { color: #1f2937; }
+  body[data-theme="light"] .heatmap-stat span { color: #4b5563; }
+
+    /* ========================= RESPONSIVE ========================= */
+    @media (max-width: 768px) {
+      /* Header */
+      .month-header { padding: 10px 12px; gap: 10px; }
+      .month-title h1 { font-size: 1.3rem; }
+      .header-actions { margin-left: 0; width: 100%; flex-wrap: wrap; gap: 6px; }
+
+      /* Nav buttons — scrollable row on mobile */
+      .header-actions .nav-btn { font-size: 0.72rem; padding: 0.4rem 0.8rem; }
+
+      /* Progress section stacks */
+      .progress-chart-wrapper { flex-direction: column; gap: 16px; }
+
+      /* Grid scrolls horizontally */
+      .month-grid-wrapper { -webkit-overflow-scrolling: touch; }
+
+      /* Task name column narrower on mobile */
+      .task-name { min-width: 110px; max-width: 130px; font-size: 0.78rem; }
+
+      /* Cells smaller on mobile */
+      .grid-cell { width: 28px; min-width: 28px; height: 28px; font-size: 0.7rem; }
+      .day-header { width: 28px; min-width: 28px; font-size: 0.6rem; }
+
+      /* Stats bar wraps */
+      .stats-bar { flex-wrap: wrap; gap: 8px; }
+      .stat-item { min-width: 70px; }
+
+      /* Quest cards full width */
+      .quests-grid { grid-template-columns: 1fr !important; }
+
+      /* Bottom padding for home bar */
+      body { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+      /* Insights panel full width */
+      .insights-panel { margin: 0; }
+
+      /* XP bar shrinks gracefully */
+      .xp-bar-wrapper { min-width: 120px; max-width: 200px; }
+    }
+
+    @media (max-width: 480px) {
+      .month-title h1 { font-size: 1.1rem; }
+      .daily-ring { display: none; } /* hide ring on very small screens */
+      .header-actions { gap: 4px; }
+      .header-actions .nav-btn { font-size: 0.65rem; padding: 0.35rem 0.65rem; }
+    }
+
+    /* Safe area for notched phones */
+    @supports (padding: max(0px)) {
+      .month-header { padding-top: max(16px, env(safe-area-inset-top)); }
+    }
+    /* ========================= XP / LEVEL SYSTEM ========================= */
+    .xp-bar-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 180px;
+      max-width: 320px;
+    }
+
+    .xp-level-badge {
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary,#4CAF50), color-mix(in srgb,var(--primary,#4CAF50) 60%, #000));
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 4px 9px;
+      border-radius: 10px;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.3s ease;
+    }
+
+    .xp-level-badge.leveling-up {
+      animation: lvl-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes lvl-pop {
+      0%   { transform: scale(0.7); }
+      60%  { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .xp-bar-track {
+      flex: 1;
+      height: 8px;
+      background: var(--border-soft);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .xp-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary,#4CAF50), color-mix(in srgb,var(--primary,#4CAF50) 70%,#fff));
+      border-radius: 8px;
+      transition: width 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .xp-bar-label {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ========================= LOGIN STREAK ========================= */
+    .nav-btn.freeze-btn {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      border-color: transparent;
+      animation: freeze-glow 2.4s ease-in-out infinite;
+    }
+    .nav-btn.freeze-btn:hover {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    }
+    @keyframes freeze-glow {
+      0%,100% { box-shadow: 0 0 6px rgba(14,165,233,0.4); }
+      50%      { box-shadow: 0 0 18px rgba(14,165,233,0.8); }
+    }
+
+    /* Login streak badge — glows when active */
+    #loginStreak.hot {
+      color: var(--done, #4ade80);
+      text-shadow: 0 0 8px color-mix(in srgb, var(--done,#4ade80) 60%, transparent);
+    }
+    #loginStreak.frozen {
+      color: #38bdf8;
+      text-shadow: 0 0 8px rgba(56,189,248,0.6);
+    }
+    #loginStreak.broken {
+      color: var(--missed, #f87171);
+    }
+
+    /* ========================= UNDO TOAST ========================= */
+    .undo-toast {
+      border-color: var(--text-muted, #555) !important;
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+      position: relative;
+      min-width: 260px;
+    }
+
+    .undo-btn {
+      margin-left: auto;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--primary, #4CAF50);
+      background: transparent;
+      color: var(--primary, #4CAF50);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+
+    .undo-btn:hover {
+      background: var(--primary, #4CAF50);
+      color: #000;
+    }
+
+    .undo-progress-wrap {
+      width: 100%;
+      height: 3px;
+      background: var(--border-soft);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+      flex-basis: 100%;
+    }
+
+    .undo-progress-bar {
+      height: 100%;
+      background: var(--primary, #4CAF50);
+      border-radius: 2px;
+      transition: width 0.08s linear;
+    }
+
+    /* ========================= TOAST STACK ========================= */
+    #toastStack {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column-reverse;  /* newest at bottom */
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    #toastStack > * {
+      pointer-events: all;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.35s cubic-bezier(0.34,1.56,0.64,1),
+                  transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    #toastStack > *.toast-show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+
+  @keyframes streakPulse {
+    0%,100% { transform: scale(1) rotate(-3deg); }
+    50%      { transform: scale(1.15) rotate(3deg); }
+  }
+  .streak-fire { display:inline-block; transform-origin: bottom center; }
+  /* ── Streak stat: visible on all themes ── */
+  #dailyStreak  { display:flex; align-items:center; gap:4px; }
+  .streak-stat strong,
+  .streak-stat #dailyStreak { color: var(--primary) !important; }
+  /* High-contrast streak for all themes */
+  .streak-num {
+    font-size: 1.1rem;
+    font-weight: 900;
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--primary) 40%, transparent);
+    border-radius: 8px;
+    padding: 1px 7px;
+    color: var(--primary) !important;
+  }
+
+  .month-stats .stat strong  { color: var(--text-main); font-weight: 800; }
+  .month-stats .stat label   { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  /* ── League pill button ── */
+  .league-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 18%, transparent),
+      color-mix(in srgb, var(--primary) 8%, transparent));
+    border: 1.5px solid color-mix(in srgb, var(--primary) 45%, transparent);
+    color: var(--primary);
+    border-radius: 12px;
+    padding: 4px 12px 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.1,0.64,1);
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--primary) 15%, transparent),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .league-pill::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 40%;
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px 12px 0 0;
+    pointer-events: none;
+  }
+  .league-stat { cursor: pointer; }
+  .league-stat:hover .league-pill {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 28%, transparent),
+      color-mix(in srgb, var(--primary) 14%, transparent));
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+    border-color: color-mix(in srgb, var(--primary) 65%, transparent);
+  }
+
+  /* ── Page transitions ── */
+  @keyframes pageIn  { from { opacity:0; } to { opacity:1; } }
+  @keyframes pageOut { from { opacity:1; } to { opacity:0; } }
+  body.page-enter { animation: pageIn  0.22s ease both; }
+  body.page-leave { animation: pageOut 0.18s ease forwards; pointer-events:none; }
+  </style>
+  <!-- Prevent Cloudflare email-decode injection errors when running locally -->
+  <meta name="cf-2fa-verify" content="no-email-protection">
+  <script>
+    // Strip any Cloudflare-injected cdn-cgi scripts before they cause 404s
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('script[src*="cdn-cgi"]').forEach(function(s){ s.remove(); });
+    });
+    // Also intercept synchronously - block before parse completes
+    (function() {
+      var _orig = document.createElement.bind(document);
+      document.createElement = function(tag) {
+        var el = _orig(tag);
+        if (tag.toLowerCase() === 'script') {
+          Object.defineProperty(el, 'src', {
+            set: function(v) {
+              if (v && v.indexOf('cdn-cgi') !== -1) return; // swallow it
+              Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').set.call(el, v);
+            },
+            get: function() {
+              return Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').get.call(el);
+            }
+          });
+        }
+        return el;
+      };
+    })();
+  </script>
+</head>
+
+<body data-theme="dark">
+<style>
+body { opacity: 0; }
+#_byteLoader {
+  position: fixed; inset: 0; z-index: 99999;
+  background: var(--bg, #0c0c14);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  transition: opacity 0.25s ease;
+}
+#_byteLoader.done { opacity: 0; pointer-events: none; }
+#_byteLoader svg { animation: _loaderPulse 1.2s ease-in-out infinite; }
+@keyframes _loaderPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.94)} }
+#_loaderDots { display: flex; gap: 6px; }
+#_loaderDots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--primary, #4CAF50);
+  animation: _dotBounce 1s ease-in-out infinite;
+}
+#_loaderDots span:nth-child(2) { animation-delay: 0.15s; }
+#_loaderDots span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes _dotBounce { 0%,100%{opacity:0.3;transform:translateY(0)} 50%{opacity:1;transform:translateY(-5px)} }
+
+    /* ── Add Habit modal ─────────────────────── */
+    .habit-modal-redesign {
+      padding: 0 !important;
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: min(480px, 96vw) !important;
+      max-width: none !important;
+    }
+    .hm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hm-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .hm-close {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .hm-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      flex: 1;
+    }
+    .hm-section { display: flex; flex-direction: column; gap: 7px; }
+    .hm-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .hm-hint { font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+    .hm-input {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 12px 14px;
+      font-family: inherit;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .hm-input:focus { border-color: var(--primary); }
+    .hm-name-input { font-size: 1rem; font-weight: 600; }
+    .hm-cat-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .hm-cat-btn {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 6px 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .hm-cat-btn.active, .hm-cat-btn:hover {
+      background: var(--primary-dim);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .hm-sched-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .hm-sched-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 13px;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .hm-sched-btn.active, .hm-sched-btn:hover {
+      background: var(--primary-dim);
+      border-color: var(--primary);
+    }
+    .hm-sched-icon { font-size: 1.2rem; line-height: 1; }
+    .hm-sched-name { font-size: 0.8rem; font-weight: 800; color: var(--text); margin-top: 4px; }
+    .hm-sched-desc { font-size: 0.68rem; color: var(--text-muted); }
+    .hm-sched-btn.active .hm-sched-name { color: var(--primary); }
+    .hm-day-grid {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .hm-day-btn {
+      cursor: pointer;
+      user-select: none;
+    }
+    .hm-day-btn input { display: none; }
+    .hm-day-btn span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .hm-day-btn input:checked + span {
+      background: var(--primary-dim);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .hm-select {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 10px 12px;
+      font-family: inherit;
+      width: 100%;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .hm-carry-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .hm-carry-slider {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .hm-carry-slider::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    #carryOverToggle:checked ~ .hm-carry-slider { background: var(--primary); }
+    #carryOverToggle:checked ~ .hm-carry-slider::after { transform: translateX(18px); }
+    #carryOverToggle { display: none; }
+    .hm-carry-label { display: flex; flex-direction: column; gap: 2px; }
+    .hm-carry-label strong { font-size: 0.85rem; color: var(--text); }
+    .hm-carry-label small { font-size: 0.72rem; color: var(--text-muted); }
+    .hm-actions {
+      display: flex;
+      gap: 10px;
+      padding: 14px 22px 18px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hm-btn-cancel {
+      flex: 0 0 auto;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .hm-btn-save {
+      flex: 1;
+      background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #000));
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 900;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+    }
+    .hm-btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    </style>
+<div id="_byteLoader">
+  <svg width="52" height="52" viewBox="0 0 80 80" fill="none">
+    <rect width="80" height="80" rx="20" fill="#10b981" opacity="0.15"/>
+    <circle cx="40" cy="32" r="18" fill="#10b981"/>
+    <circle cx="33" cy="29" r="3.5" fill="white"/>
+    <circle cx="47" cy="29" r="3.5" fill="white"/>
+    <circle cx="33" cy="29" r="1.8" fill="#065f46"/>
+    <circle cx="47" cy="29" r="1.8" fill="#065f46"/>
+    <path d="M32 38 Q40 44 48 38" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <rect x="24" y="18" width="3" height="8" rx="1.5" fill="#10b981"/>
+    <rect x="53" y="18" width="3" height="8" rx="1.5" fill="#10b981"/>
+  </svg>
+  <div id="_loaderDots"><span></span><span></span><span></span></div>
+</div>
+<script>
+(function() {
+  window._pageReady = function() {
+    if (window._pageReadyDone) return;
+    window._pageReadyDone = true;
+    var loader = document.getElementById("_byteLoader");
+    if (loader) { loader.classList.add("done"); setTimeout(function(){ loader.remove(); }, 280); }
+    document.body.style.transition = "opacity 0.22s ease";
+    document.body.style.opacity = "1";
+  };
+  setTimeout(window._pageReady, 1200); // max wait
+})();
+</script>
+
+
+  <!-- HEADER -->
+  <header class="month-header">
+
+    <div class="month-title">
+      <h1 id="currentMonth">JANUARY</h1>
+      <span id="currentYear">2026</span>
+    </div>
+
+    <!-- XP LEVEL BAR -->
+    <div class="xp-bar-wrapper">
+      <div class="xp-level-badge" id="xpLevelBadge">LV 1</div>
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" id="xpBarFill"></div>
+      </div>
+      <div class="xp-bar-label" id="xpBarLabel">0 / 100 XP</div>
+    </div>
+
+    <div class="month-stats">
+      <div class="stat">
+        <label>Habits</label>
+        <strong id="habitCount">0</strong>
+      </div>
+      <div class="stat">
+        <label>Completed</label>
+        <strong id="completedCount">0</strong>
+      </div>
+      <div class="stat progress-stat">
+        <label>Monthly Progress</label>
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+          <span class="progress-percent">0%</span>
+        </div>
+      </div>
+      <div class="stat streak-stat">
+        <label>Daily Streak</label>
+        <strong id="dailyStreak">0 🔥</strong>
+      </div>
+      <div class="stat league-stat" onclick="window.openLeagueDashboard()" title="View your League">
+        <label>League</label>
+        <div id="leagueBadge" class="league-pill">—</div>
+      </div>
+      <div class="stat">
+        <label>Login Streak</label>
+        <strong id="loginStreak">0 📅</strong>
+      </div>
+      <div class="stat">
+        <label>Gems</label>
+        <strong id="gemCount">0 💎</strong>
+      </div>
+    </div>
+
+    <!-- HEADER ACTIONS -->
+    <div class="header-actions">
+      <a href="journal.html"  class="nav-btn">📓 Journal</a>
+      <a href="timeline.html" class="nav-btn" title="Weekly Overview">📅 Weekly</a>
+        <a href="coach.html"    class="nav-btn">🧠 Coach</a>
+      <a href="social.html"   class="nav-btn">👥 Friends</a>
+      <a href="settings.html" class="nav-btn" onclick="sessionStorage.setItem('navSource','dashboard')">⚙️ Settings</a>
+      <button id="saveStreakBtn" class="nav-btn save-streak" style="display:none" onclick="saveStreakWithGems()">
+        💎 Save Streak (100)
+      </button>
+      <button id="freezeLoginBtn" class="nav-btn freeze-btn" style="display:none" onclick="freezeLoginStreak()">
+        🧊 Freeze Login (50)
+      </button>
+    </div>
+    <!-- Hidden elements JS still references -->
+    <select id="theme-select" style="display:none"></select>
+    <select id="streak-threshold" style="display:none">
+      <option value="60">60%</option>
+      <option value="70">70%</option>
+      <option value="80" selected>80%</option>
+      <option value="100">100%</option>
+    </select>
+    <button id="logoutBtn" style="display:none"></button>
+
+  </header>
+
+  <!-- MAIN DASHBOARD -->
+  <main class="dashboard">
+    <section class="task-panel">
+
+      <div class="task-panel-header">
+        <h2>My Habits</h2>
+        <button id="addTaskBtn">+ Add Habit</button>
+      </div>
+
+      <!-- HABIT MODAL -->
+      <div id="habitModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box habit-modal-redesign">
+          <!-- Header -->
+          <div class="hm-header">
+            <div class="hm-title">✨ New Habit</div>
+            <button class="hm-close" id="cancelHabit">✕</button>
+          </div>
+
+          <!-- Scrollable body -->
+          <div class="hm-body">
+
+          <!-- Name input -->
+          <div class="hm-section">
+            <div class="hm-label">What habit do you want to build?</div>
+            <input id="habitNameInput" type="text"
+              class="hm-input hm-name-input"
+              placeholder="e.g. Read 30 minutes, Drink water, Go for a walk…"
+              autocomplete="off" maxlength="80" />
+          </div>
+
+          <!-- Category pills -->
+          <div class="hm-section">
+            <div class="hm-label">Category</div>
+            <div class="hm-cat-grid" id="hmCatGrid">
+              <button class="hm-cat-btn active" data-cat="general">🌀 General</button>
+              <button class="hm-cat-btn" data-cat="fitness">💪 Fitness</button>
+              <button class="hm-cat-btn" data-cat="health">❤️ Health</button>
+              <button class="hm-cat-btn" data-cat="mindful">🧘 Mindfulness</button>
+              <button class="hm-cat-btn" data-cat="learning">📚 Learning</button>
+              <button class="hm-cat-btn" data-cat="productive">🚀 Productivity</button>
+              <button class="hm-cat-btn" data-cat="nutrition">🥗 Nutrition</button>
+              <button class="hm-cat-btn" data-cat="social">💬 Social</button>
+              <button class="hm-cat-btn" data-cat="balance">⚖️ Balance</button>
+              <div id="hmCustomCatBtns"></div>
+              <button class="hm-cat-btn hm-cat-create" id="hmAddCatBtn"
+                onclick="openCustomCatPicker()"
+                style="border-style:dashed;opacity:0.6">＋ Custom <span style="font-size:0.58rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:1px 5px;border-radius:5px;font-weight:900;margin-left:3px">PRO</span></button>
+            </div>
+            <!-- Hidden select still used by JS -->
+            <select id="habitCategorySelect" style="display:none">
+              <option value="general">General</option>
+              <option value="fitness">Fitness</option>
+              <option value="health">Health</option>
+              <option value="mindful">Mindfulness</option>
+              <option value="learning">Learning</option>
+              <option value="productive">Productivity</option>
+              <option value="nutrition">Nutrition</option>
+              <option value="social">Social</option>
+              <option value="balance">Balance</option>
+            </select>
+          </div>
+
+          <!-- Schedule type -->
+          <div class="hm-section">
+            <div class="hm-label">How often?</div>
+            <div class="hm-sched-grid" id="hmSchedGrid">
+              <button class="hm-sched-btn active" data-sched="daily">
+                <span class="hm-sched-icon">📅</span>
+                <span class="hm-sched-name">Every Day</span>
+                <span class="hm-sched-desc">7 days a week</span>
+              </button>
+              <button class="hm-sched-btn" data-sched="weekly">
+                <span class="hm-sched-icon">📆</span>
+                <span class="hm-sched-name">Specific Days</span>
+                <span class="hm-sched-desc">Pick days of the week</span>
+              </button>
+              <button class="hm-sched-btn" data-sched="once_week">
+                <span class="hm-sched-icon">🗓️</span>
+                <span class="hm-sched-name">Once a Week</span>
+                <span class="hm-sched-desc">1 day per week</span>
+              </button>
+              <button class="hm-sched-btn" data-sched="once_month">
+                <span class="hm-sched-icon">📋</span>
+                <span class="hm-sched-name">Once a Month</span>
+                <span class="hm-sched-desc">1 day per month</span>
+              </button>
+              <button class="hm-sched-btn" data-sched="interval">
+                <span class="hm-sched-icon">🔁</span>
+                <span class="hm-sched-name">Every N Days</span>
+                <span class="hm-sched-desc">Custom interval</span>
+              </button>
+            </div>
+            <!-- Hidden select still used by save logic -->
+            <select id="scheduleType" style="display:none">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="once_week">Once a week</option>
+              <option value="once_month">Once a month</option>
+              <option value="interval">Every N days</option>
+            </select>
+          </div>
+
+          <!-- Weekly day picker -->
+          <div id="weeklyPicker" class="hm-section hidden">
+            <div class="hm-label">Which days?</div>
+            <div class="hm-day-grid">
+              <label class="hm-day-btn"><input type="checkbox" value="1"><span>Mon</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="2"><span>Tue</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="3"><span>Wed</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="4"><span>Thu</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="5"><span>Fri</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="6"><span>Sat</span></label>
+              <label class="hm-day-btn"><input type="checkbox" value="0"><span>Sun</span></label>
+            </div>
+          </div>
+
+          <!-- Once a week: pick preferred day -->
+          <div id="onceWeekPicker" class="hm-section hidden">
+            <div class="hm-label">Preferred day <span class="hm-hint">(the app will mark this day each week)</span></div>
+            <select id="onceWeekDayPicker" class="hm-select">
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+              <option value="0">Sunday</option>
+            </select>
+          </div>
+
+          <!-- Once a month: pick date -->
+          <div id="onceMonthPicker" class="hm-section hidden">
+            <div class="hm-label">Which day of the month? <span class="hm-hint">(e.g. 1st, 15th)</span></div>
+            <select id="onceMonthDatePicker" class="hm-select">
+              <!-- filled by JS -->
+            </select>
+          </div>
+
+          <!-- Interval picker -->
+          <div id="intervalPicker" class="hm-section hidden">
+            <div class="hm-label">Repeat every how many days?</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input id="intervalInput" type="number" min="1" max="30" placeholder="3" class="hm-select" style="width:80px;text-align:center;font-size:1.1rem;font-weight:800;" />
+              <span style="font-size:0.82rem;color:var(--text-muted)">days</span>
+            </div>
+          </div>
+
+          <!-- Optional time -->
+          <div class="hm-section">
+            <div class="hm-label">Reminder time <span class="hm-hint">(optional — shows on Weekly view)</span></div>
+            <input type="time" id="habitTimeInput" class="hm-select" style="width:auto" />
+          </div>
+
+          <!-- Carry over toggle -->
+          <div class="hm-section" style="padding-bottom:0">
+            <label class="hm-carry-toggle">
+              <input type="checkbox" id="carryOverToggle" checked />
+              <span class="hm-carry-slider"></span>
+              <span class="hm-carry-label">
+                <strong>Continue next month</strong>
+                <small>Automatically carry this habit into future months</small>
+              </span>
+            </label>
+          </div>
+
+          </div><!-- end hm-body -->
+
+          <!-- Actions -->
+          <div class="hm-actions">
+            <button class="hm-btn-cancel" id="cancelHabit2">Cancel</button>
+            <button class="hm-btn-save" id="saveHabit">＋ Add Habit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fill once-a-month date picker -->
+      <script>
+        (function() {
+          var sel = document.getElementById('onceMonthDatePicker');
+          if (!sel) return;
+          var suffix = ['st','nd','rd'];
+          for (var i = 1; i <= 28; i++) {
+            var s = i <= 3 ? suffix[i-1] : 'th';
+            var o = document.createElement('option');
+            o.value = i; o.textContent = i + s;
+            sel.appendChild(o);
+          }
+
+          // Wire up category pill clicks
+          document.querySelectorAll('.hm-cat-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.hm-cat-btn').forEach(function(b) { b.classList.remove('active'); });
+              btn.classList.add('active');
+              document.getElementById('habitCategorySelect').value = btn.dataset.cat;
+            });
+          });
+
+          // Wire up schedule card clicks
+          document.querySelectorAll('.hm-sched-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.hm-sched-btn').forEach(function(b) { b.classList.remove('active'); });
+              btn.classList.add('active');
+              var v = btn.dataset.sched;
+              document.getElementById('scheduleType').value = v;
+              // Show/hide pickers
+              document.getElementById('weeklyPicker').classList.toggle('hidden', v !== 'weekly');
+              document.getElementById('intervalPicker').classList.toggle('hidden', v !== 'interval');
+              document.getElementById('onceWeekPicker').classList.toggle('hidden', v !== 'once_week');
+              document.getElementById('onceMonthPicker').classList.toggle('hidden', v !== 'once_month');
+            });
+          });
+
+          // Cancel button 2
+          var cb2 = document.getElementById('cancelHabit2');
+          if (cb2) cb2.addEventListener('click', function() {
+            document.getElementById('habitModal').classList.add('hidden');
+          });
+        })();
+      </script>
+      <!-- SEASONAL EVENT BANNER -->
+      <div id="seasonalBanner" style="display:none;border-radius:14px;border:1px solid;padding:0;margin-bottom:12px;overflow:hidden;"></div>
+
+      <!-- Mood popup injected by JS -->
+
+      <!-- ADAPTIVE COACH -->
+      <div id="coachPanel"></div>
+
+      <!-- WEEKLY SUMMARY STRIP (rendered by monthly.js) -->
+      <!-- DAILY QUESTS (rendered by monthly.js) -->
+      <div id="questsPanel"></div>
+
+      <div id="weekStrip"></div>
+
+      <!-- GRID (rendered by monthly.js) -->
+      <div class="month-grid-wrapper" id="gridWrapper"></div>
+
+      <!-- PROGRESS CHART + RING -->
+      <div class="progress-chart-wrapper">
+        <section class="progress-chart">
+          <h3>Monthly Progress</h3>
+          <canvas id="progressLine"></canvas>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--done,#4ade80)"></span>Done</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--missed,#f87171)"></span>Failed</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--text-muted,#9aa4b2)"></span>Unmarked</span>
+            <span class="legend-item"><span class="legend-dash" style="background:var(--primary,#4CAF50)"></span>Weekly avg</span>
+          </div>
+        </section>
+
+        <div class="daily-ring">
+          <svg width="130" height="130" viewBox="0 0 130 130">
+            <circle class="ring-bg"      cx="65" cy="65" r="50"/>
+            <circle class="ring-progress" cx="65" cy="65" r="50"/>
+          </svg>
+          <div class="ring-text">
+            <span id="todayPercent">0%</span>
+            <small>Today</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- MONTH NAV (rendered by monthly.js) -->
+      <nav class="month-nav" id="monthNav"></nav>
+
+      <!-- MONTHLY INSIGHTS PANEL -->
+      <div class="insights-panel" id="insightsPanel"></div>
+
+      <!-- YEARLY HEAT MAP -->
+      <div id="heatmapSection"></div>
+
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="footer-logo">🧬</span>
+        <span class="footer-name">Habit Tracker</span>
+        <span class="footer-version">v3.0</span>
+      </div>
+      <div class="footer-copy">
+        Made with <span class="footer-heart">♥</span> by <strong>BLANK</strong>
+        <span class="footer-dot">·</span>© 2026
+      </div>
+      <div class="footer-links">
+        <a href="settings.html">Settings</a>
+        <a href="coach.html">Coach</a>
+        <a href="journal.html">Journal</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ONLY monthly.js — state.js and storage.js removed (unused, conflicting) -->
+  <div id="toastStack"></div>
+  <script>
+/* =====================================================
+   BYTE — Habit Tracker Mascot & Tutorial System
+   
+   Byte is a friendly little robot/orb character who
+   guides new users through the app with personality.
+   Inspired by Duo but with its own distinct vibe.
+===================================================== */
+
+const ByteTutorial = (() => {
+
+  const STORAGE_KEY = "habitTutorialState";
+  const getTutState = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  const saveTutState = (s) => localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+
+  /* ── Byte's personality lines ── */
+  const BYTE_MOODS = {
+    happy:   { face: `<circle cx="38" cy="44" r="5" fill="#1a1a2e"/><circle cx="62" cy="44" r="5" fill="#1a1a2e"/><path d="M33 56 Q50 68 67 56" stroke="#1a1a2e" stroke-width="3.5" fill="none" stroke-linecap="round"/>`, glow: "#4ade80" },
+    excited: { face: `<circle cx="38" cy="43" r="6" fill="#1a1a2e"/><circle cx="62" cy="43" r="6" fill="#1a1a2e"/><path d="M30 55 Q50 72 70 55" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="38" cy="41" r="2.5" fill="white" opacity="0.7"/><circle cx="62" cy="41" r="2.5" fill="white" opacity="0.7"/>`, glow: "#facc15" },
+    thinking:{ face: `<ellipse cx="38" cy="44" rx="5" ry="4" fill="#1a1a2e"/><ellipse cx="62" cy="44" rx="5" ry="4" fill="#1a1a2e"/><path d="M36 58 Q50 55 64 58" stroke="#1a1a2e" stroke-width="3" fill="none" stroke-linecap="round"/>`, glow: "#a78bfa" },
+    cool:    { face: `<rect x="28" y="40" width="20" height="9" rx="4" fill="#1a1a2e"/><rect x="52" y="40" width="20" height="9" rx="4" fill="#1a1a2e"/><path d="M33 56 Q50 67 67 56" stroke="#1a1a2e" stroke-width="3.5" fill="none" stroke-linecap="round"/>`, glow: "#06b6d4" },
+    cheer:   { face: `<circle cx="38" cy="42" r="6" fill="#1a1a2e"/><circle cx="62" cy="42" r="6" fill="#1a1a2e"/><circle cx="37" cy="40" r="2.5" fill="white" opacity="0.8"/><circle cx="61" cy="40" r="2.5" fill="white" opacity="0.8"/><path d="M28 56 Q50 74 72 56" stroke="#1a1a2e" stroke-width="4.5" fill="none" stroke-linecap="round"/>`, glow: "#fb923c" },
+    wink:    { face: `<circle cx="38" cy="44" r="5" fill="#1a1a2e"/><path d="M55 40 L69 40" stroke="#1a1a2e" stroke-width="4" stroke-linecap="round"/><path d="M33 56 Q50 68 67 56" stroke="#1a1a2e" stroke-width="3.5" fill="none" stroke-linecap="round"/>`, glow: "#4ade80" },
+  };
+
+  /* ── Tutorial steps ── */
+  const STEPS = [
+    {
+      id: "welcome",
+      mood: "excited",
+      title: "Hey! I'm Byte! 👋",
+      text: "I'm your habit buddy. I'll be here every step of the way — cheering you on, giving tips, and keeping you honest. Let me show you around!",
+      action: "Let's go!",
+      highlight: null,
+      position: "center",
+    },
+    {
+      id: "grid",
+      mood: "happy",
+      title: "Your habit grid",
+      text: "This is the heart of the app. Each row is a habit, each column is a day of the month. Tap a cell to mark it ✅ done or ❌ missed.",
+      action: "Got it →",
+      highlight: ".month-grid-wrapper",
+      position: "bottom",
+    },
+    {
+      id: "add_habit",
+      mood: "thinking",
+      title: "Add your first habit",
+      text: "Hit '+ Add Habit' to create a new one. Give it a name, pick a schedule — daily, weekly, or every N days — and you're set.",
+      action: "Next →",
+      highlight: "#addTaskBtn",
+      position: "bottom",
+    },
+    {
+      id: "streak",
+      mood: "cheer",
+      title: "Build your streak 🔥",
+      text: "Complete enough habits each day and your streak grows. Miss a day and it resets — unless you spend gems to save it! Streaks are addictive, trust me.",
+      action: "Ooh! →",
+      highlight: ".streak-stat",
+      position: "bottom",
+    },
+    {
+      id: "xp",
+      mood: "cool",
+      title: "Earn XP & level up ⚡",
+      text: "Every habit you tick earns XP. Level up, climb leagues, and unlock achievements. The more consistent you are, the faster you rise.",
+      action: "Nice →",
+      highlight: ".xp-bar-wrapper",
+      position: "bottom",
+    },
+    {
+      id: "gems",
+      mood: "wink",
+      title: "Collect gems 💎",
+      text: "Perfect days earn you gems — 10 per day. Spend them to freeze a streak when life gets in the way. No shame, we all need a lifeline.",
+      action: "Smart! →",
+      highlight: ".stat[title]",
+      position: "bottom",
+    },
+    {
+      id: "mood",
+      mood: "happy",
+      title: "Log your mood 😊",
+      text: "Each morning I'll pop up and ask how you're feeling. It only takes a second and you can track your mood over time in the Journal.",
+      action: "Love it →",
+      highlight: null,
+      position: "center",
+    },
+    {
+      id: "settings",
+      mood: "thinking",
+      title: "Everything's in Settings ⚙️",
+      text: "Change your theme, set reminders, view achievements, find friends, check your analytics — all in one place. It's the control room.",
+      action: "Makes sense →",
+      highlight: "a[href='settings.html']",
+      position: "bottom",
+    },
+    {
+      id: "freeze_login",
+      mood: "cool",
+      title: "❄️ The Freeze Login button",
+      text: "See 🧊 Freeze Login (50) next to your login streak? It's streak insurance! Spend 50 gems to protect your LOGIN streak for one day — so even if you forget to open the app, your streak won't break. You can bank up to 2 freezes at a time.",
+      action: "Smart! →",
+      highlight: "#freezeLoginBtn",
+      position: "bottom",
+    },
+    {
+      id: "habit_freeze",
+      mood: "thinking",
+      title: "❄️ Freezing individual habits",
+      text: "Each habit also has its own ❄️ freeze button. Tap it to protect that specific habit's streak for today — perfect if you're sick or travelling. It costs 💎 gems but saves your hard-earned streak. No freeze used if you still complete it!",
+      action: "Ohhh →",
+      highlight: ".freeze-btn",
+      position: "bottom",
+    },
+    {
+      id: "shield",
+      mood: "cheer",
+      title: "🛡️ Streak Shields — your secret weapon",
+      text: "Complete a PERFECT WEEK (all habits done, every day for 7 days) and Byte rewards you with a 🛡️ Shield! If you accidentally miss marking a habit that had a 3+ day streak, the shield auto-activates and saves it. No gems needed — just consistency!",
+      action: "Love it →",
+      highlight: "#shieldBadge",
+      position: "bottom",
+    },
+    {
+      id: "done",
+      mood: "cheer",
+      title: "You're ready! 🚀",
+      text: "That's everything! Byte will be right here rooting for you — cheering wins, calling out excuses, and making sure you never forget why you started. Small habits. Done daily. Change EVERYTHING. Now go! 💪",
+      action: "LET'S DO THIS! 💪",
+      highlight: null,
+      position: "center",
+    },
+  ];
+
+  /* ── State ── */
+  let currentStep = 0;
+  let overlayEl   = null;
+  let byteEl      = null;
+  let isOpen      = false;
+
+  /* ── Build Byte SVG — reads byteCustom from localStorage ── */
+  const BYTE_COLORS_MAP = {
+    green:  { light:"#86efac", mid:"#22c55e", dark:"#15803d" },
+    blue:   { light:"#7dd3fc", mid:"#0ea5e9", dark:"#0369a1" },
+    purple: { light:"#d8b4fe", mid:"#a855f7", dark:"#7e22ce" },
+    pink:   { light:"#f9a8d4", mid:"#ec4899", dark:"#9d174d" },
+    red:    { light:"#fca5a5", mid:"#ef4444", dark:"#991b1b" },
+    orange: { light:"#fdba74", mid:"#f97316", dark:"#9a3412" },
+    gold:   { light:"#fde68a", mid:"#f59e0b", dark:"#92400e" },
+    teal:   { light:"#99f6e4", mid:"#14b8a6", dark:"#0f766e" },
+    indigo: { light:"#a5b4fc", mid:"#6366f1", dark:"#3730a3" },
+    rose:   { light:"#fda4af", mid:"#f43f5e", dark:"#9f1239" },
+  };
+  const BYTE_HATS_MAP = {
+    cap:    '<path d="M20,28 Q23,13 50,13 Q77,13 80,28 Z" fill="#1e40af"/><ellipse cx="50" cy="28" rx="31" ry="5.5" fill="#3b82f6"/><path d="M50,28 Q74,30 88,32 Q86,38 80,36 Q70,32 50,30 Z" fill="#1d4ed8"/>',
+    crown:  '<path d="M22,30 L22,18 L34,25 L50,8 L66,25 L78,18 L78,30 Z" fill="#fbbf24"/><rect x="20" y="28" width="60" height="7" rx="3.5" fill="#d97706"/><circle cx="50" cy="8" r="4.5" fill="#ef4444"/><circle cx="22" cy="18" r="3.5" fill="#7c3aed"/><circle cx="78" cy="18" r="3.5" fill="#0ea5e9"/>',
+    party:  '<path d="M50,2 L27,31 L73,31 Z" fill="#f43f5e"/><ellipse cx="50" cy="31" rx="23" ry="5.5" fill="#f43f5e"/><circle cx="50" cy="2" r="4" fill="#fbbf24"/><circle cx="35" cy="20" r="2.5" fill="white" opacity="0.7"/><circle cx="61" cy="14" r="2" fill="white" opacity="0.5"/>',
+    tophat: '<ellipse cx="50" cy="32" rx="30" ry="6" fill="#111827"/><rect x="30" y="6" width="40" height="26" rx="4" fill="#111827"/><rect x="30" y="10" width="40" height="4" rx="2" fill="#dc2626" opacity="0.95"/>',
+    halo:   '<ellipse cx="50" cy="7" rx="22" ry="6" fill="none" stroke="#fef08a" stroke-width="5" opacity="0.3"/><ellipse cx="50" cy="7" rx="22" ry="6" fill="none" stroke="#fbbf24" stroke-width="3.5"/><ellipse cx="50" cy="7" rx="22" ry="6" fill="none" stroke="#fef9c3" stroke-width="1" opacity="0.8"/>',
+    viking: '<path d="M20,31 Q20,11 50,11 Q80,11 80,31 Z" fill="#4b5563"/><ellipse cx="50" cy="31" rx="31" ry="5.5" fill="#374151"/><rect x="38" y="8" width="24" height="7" rx="3.5" fill="#ef4444"/><path d="M20,22 Q8,14 6,6 Q14,8 18,18 Z" fill="#d97706"/><path d="M80,22 Q92,14 94,6 Q86,8 82,18 Z" fill="#d97706"/><rect x="46" y="28" width="8" height="16" rx="4" fill="#374151"/>',
+    wizard: '<ellipse cx="50" cy="31" rx="24" ry="6" fill="#581c87"/><path d="M50,2 L26,31 L74,31 Z" fill="#6d28d9"/><path d="M50,2 L38,22 L50,31 Z" fill="#7c3aed"/><ellipse cx="50" cy="31" rx="24" ry="6" fill="none" stroke="#a78bfa" stroke-width="1.5" opacity="0.7"/><circle cx="50" cy="2.5" r="3.5" fill="#fbbf24"/>',
+  };
+  const BYTE_ACCS_MAP = {
+    glasses: '<ellipse cx="38" cy="44" rx="11" ry="9" fill="#0f172a" stroke="#475569" stroke-width="1.5"/><ellipse cx="62" cy="44" rx="11" ry="9" fill="#0f172a" stroke="#475569" stroke-width="1.5"/><ellipse cx="34" cy="41" rx="4" ry="2.5" fill="white" opacity="0.12" transform="rotate(-20 34 41)"/><ellipse cx="58" cy="41" rx="4" ry="2.5" fill="white" opacity="0.12" transform="rotate(-20 58 41)"/><line x1="49" y1="44" x2="51" y2="44" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/><line x1="15" y1="43" x2="27" y2="44" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/><line x1="73" y1="44" x2="85" y2="43" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>',
+    nerd:    '<circle cx="38" cy="44" r="10.5" fill="rgba(254,243,199,0.05)" stroke="#92400e" stroke-width="2"/><circle cx="62" cy="44" r="10.5" fill="rgba(254,243,199,0.05)" stroke="#92400e" stroke-width="2"/><path d="M48.5,44 Q50,41.5 51.5,44" fill="none" stroke="#92400e" stroke-width="2"/><line x1="15" y1="43.5" x2="27.5" y2="44" stroke="#92400e" stroke-width="1.8" stroke-linecap="round"/><line x1="72.5" y1="44" x2="85" y2="43.5" stroke="#92400e" stroke-width="1.8" stroke-linecap="round"/>',
+    monocle: '<circle cx="62" cy="44" r="11.5" fill="rgba(254,243,199,0.04)" stroke="#b45309" stroke-width="2.5"/><path d="M68,34 Q75,28 80,22 Q83,18 84,14" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="2.5,2" opacity="0.8"/><circle cx="68" cy="34" r="1.5" fill="#d97706"/>',
+    scarf:   '<path d="M16,66 Q30,60 50,62 Q70,64 84,60" stroke="#dc2626" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M16,66 Q30,60 50,62 Q70,64 84,60" stroke="#fca5a5" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.3"/><path d="M28,64 Q24,74 26,84" stroke="#b91c1c" stroke-width="8" fill="none" stroke-linecap="round"/>',
+    bow:     '<path d="M30,71 L44,76 L30,81 Q26,76 30,71 Z" fill="#db2777"/><path d="M70,71 L56,76 L70,81 Q74,76 70,71 Z" fill="#db2777"/><ellipse cx="50" cy="76" rx="7.5" ry="6" fill="#9d174d"/><ellipse cx="50" cy="76" rx="4" ry="3" fill="#db2777"/><ellipse cx="50" cy="76" rx="2" ry="1.5" fill="#f9a8d4" opacity="0.5"/>',
+  };
+  const getByteCustom = () => {
+    try { return JSON.parse(localStorage.getItem("byteCustom") || "{}"); } catch(e) { return {}; }
+  };
+  const buildByteSVG = (mood = "happy", size = 100) => {
+    const m    = BYTE_MOODS[mood] || BYTE_MOODS.happy;
+    const cust = getByteCustom();
+    const col  = BYTE_COLORS_MAP[cust.color || "green"] || BYTE_COLORS_MAP.green;
+    const hatSvg = BYTE_HATS_MAP[cust.hat || ""] || "";
+    const accSvg = BYTE_ACCS_MAP[cust.accessory || ""] || "";
+    const uid  = Math.random().toString(36).slice(2,6);
+    return `
+      <svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="byteBody${uid}" cx="45%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="${col.light}"/>
+            <stop offset="60%" stop-color="${col.mid}"/>
+            <stop offset="100%" stop-color="${col.dark}"/>
+          </radialGradient>
+          <radialGradient id="byteGlow${uid}" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="${m.glow}" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="${m.glow}" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="byteShadow${uid}">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="${m.glow}" flood-opacity="0.5"/>
+          </filter>
+        </defs>
+        <ellipse cx="50" cy="50" rx="48" ry="48" fill="url(#byteGlow${uid})"/>
+        <circle cx="50" cy="50" r="38" fill="url(#byteBody${uid})" filter="url(#byteShadow${uid})"/>
+        <ellipse cx="37" cy="33" rx="12" ry="8" fill="white" opacity="0.25" transform="rotate(-20 37 33)"/>
+        <line x1="50" y1="12" x2="50" y2="26" stroke="${col.dark}" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="50" cy="10" r="4" fill="${m.glow}"/>
+        <circle cx="12" cy="50" r="7" fill="${col.dark}"/>
+        <circle cx="88" cy="50" r="7" fill="${col.dark}"/>
+        ${m.face}
+        <circle cx="26" cy="54" r="6" fill="${m.glow}" opacity="0.3"/>
+        <circle cx="74" cy="54" r="6" fill="${m.glow}" opacity="0.3"/>
+        ${accSvg}${hatSvg}
+      </svg>`;
+  };
+
+  /* ── Floating Byte widget (persistent after tutorial) ── */
+  const buildFloatingByte = () => {
+    const btn = document.createElement("div");
+    btn.id = "byteFloat";
+    btn.innerHTML = buildByteSVG("happy", 54);
+    btn.title = "Chat with Byte";
+    btn.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 54px;
+      height: 54px;
+      cursor: pointer;
+      z-index: 9000;
+      animation: byteFloat 3s ease-in-out infinite;
+      filter: drop-shadow(0 4px 12px rgba(16,185,129,0.4));
+      transition: transform 0.2s ease;
+    `;
+    btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.15)");
+    btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
+    btn.addEventListener("click", () => openQuickChat());
+    document.body.appendChild(btn);
+  };
+
+  /* ── Quick chat tips ── */
+  const TIPS = [
+    { mood:"happy",    text:"Right-click any cell to add a personal note to that day! I love reading your little journal entries 📝" },
+    { mood:"thinking", text:"Completing habits in quick succession gives you a combo XP bonus. I timed it myself ⚡" },
+    { mood:"cool",     text:"Seasons give XP bonuses — check the dashboard for active events! (I look different on Halloween 👀)" },
+    { mood:"cheer",    text:"Challenge friends in the Friends tab! Nothing motivates like someone breathing down your neck ⚔️" },
+    { mood:"wink",     text:"Streak freezes cost gems per habit. Use them strategically — not just because you were lazy 😐" },
+    { mood:"happy",    text:"The Journal tracks your mood over time. Byte secretly reads them all. Just kidding. ...Probably. 😊" },
+    { mood:"excited",  text:"Perfect a full month and you unlock rare badges. Byte has never done it himself but that's beside the point 🏆" },
+    { mood:"thinking", text:"Your Analytics page shows which days you're strongest. Mine would show every day. Byte is consistent 📊" },
+    { mood:"cool",     text:"Did you know Byte has a secret form? Try clicking me exactly 7 times in a row 🤫" },
+    { mood:"wink",     text:"The fastest way to grow? Pick 3 habits and actually do them. Not 12 habits you'll forget about by Wednesday 😅" },
+    { mood:"cheer",    text:"Nudge inactive friends in the Friends tab! Your friend's streak is their problem but also kind of yours 👊" },
+    { mood:"happy",    text:"Set a scheduled time on habits to see them on the Weekly view! I'll remind you ⏰" },
+  ];
+  let lastTipIdx = -1;
+
+  // Easter egg: click counter
+  let _byteClickCount  = 0;
+  let _byteClickTimer  = null;
+  let _byteSuperMode   = false;
+  let _byteIdleTimer   = null;
+  let _byteIdleMin     = 90; // seconds before Byte does something random
+  const _byteGreetings = [
+    ["excited", "Oh! Hi there!", "Byte was just doing byte things. What's up? 👋"],
+    ["happy",   "Hey!",          "Byte missed you! Tap me any time for tips or just to say hi 😊"],
+    ["cool",    "BEEP BOOP",     "That's robot for 'hey'. Byte is perfectly normal and not developing feelings 🤖"],
+    ["wink",    "*waves*",       "Byte has been very productive today. Unlike some humans Byte could mention 👀"],
+    ["thinking","Oh, you again", "Byte was just recalculating your streak projections. For fun. Byte has fun. This is fine 🤓"],
+    ["cheer",   "YO!!",          "Byte's energy levels are at maximum right now. LET'S GO BUILD HABITS! 🔥"],
+  ];
+  const _byteIdleQuips = [
+    ["thinking", "Psst…",        "Byte noticed you haven't marked any habits yet today. Just saying 👀"],
+    ["wink",     "Hey!",          "Byte's been floating here for a while. Not complaining. Just floating. And watching ✨"],
+    ["happy",    "Byte report:",  "All systems nominal. Habits: awaiting action. Byte's vibe: immaculate 🌟"],
+    ["cool",     "*yawn*",        "Byte almost fell asleep. Don't let that happen again. Do a habit or something 😴"],
+    ["cheer",    "RANDOM THOUGHT:","What if streaks were literally on fire? Byte has been thinking about this for 47 minutes 🔥"],
+    ["excited",  "OH WAIT—",      "Did Byte just see a new badge you could unlock? Go check Achievements! Or don't. But do 🏆"],
+  ];
+  let _byteIdleQuipIdx = -1;
+
+  const openQuickChat = () => {
+    _byteClickCount++;
+    clearTimeout(_byteClickTimer);
+
+    // Easter egg: 7 clicks = SUPER BYTE (premium only)
+    if (_byteClickCount >= 7) {
+      if (window.HabitPremium && !window.HabitPremium.isPremium()) {
+        _byteClickCount = 0;
+        showBubble("wink", "Byte's Secret 👀", "This easter egg is for Premium users only. Byte sees your dedication though. Upgrade to unlock the full Byte experience! ⭐", false);
+        return;
+      }
+      _byteClickCount = 0;
+      _byteSuperMode  = !_byteSuperMode;
+      const btn = document.getElementById("byteFloat");
+      if (_byteSuperMode) {
+        btn.innerHTML = buildByteSVG("excited", 54);
+        btn.style.filter = "drop-shadow(0 0 20px gold) drop-shadow(0 0 40px #fbbf24)";
+        btn.style.transform = "scale(1.3)";
+        showBubble("excited", "✨ SUPER BYTE ACTIVATED", "You found the secret! For the next 60 seconds Byte is operating at MAXIMUM POWER. Byte doesn't know what that means but it sounds incredible! 🌟", true);
+        setTimeout(() => {
+          if (!_byteSuperMode) return;
+          _byteSuperMode = false;
+          btn.innerHTML = buildByteSVG("happy", 54);
+          btn.style.filter = "drop-shadow(0 4px 12px rgba(16,185,129,0.4))";
+          btn.style.transform = "scale(1)";
+        }, 60000);
+      } else {
+        btn.innerHTML = buildByteSVG("happy", 54);
+        btn.style.filter = "drop-shadow(0 4px 12px rgba(16,185,129,0.4))";
+        btn.style.transform = "scale(1)";
+        showBubble("happy", "Back to normal", "Super mode deactivated. Byte is back to regular power levels. Still impressive though 😌", false);
+      }
+      return;
+    }
+
+    _byteClickTimer = setTimeout(() => { _byteClickCount = 0; }, 2000);
+
+    // Alternate between greetings and tips
+    const useGreeting = Math.random() < 0.3;
+    if (useGreeting) {
+      const g = _byteGreetings[Math.floor(Math.random() * _byteGreetings.length)];
+      showBubble(g[0], g[1], g[2], false);
+      return;
+    }
+
+    let idx;
+    do { idx = Math.floor(Math.random() * TIPS.length); } while (idx === lastTipIdx);
+    lastTipIdx = idx;
+    const tip = TIPS[idx];
+    showBubble(tip.mood, "💡 Byte's Tip", tip.text, false);
+  };
+
+  // Idle quips — Byte does random things when left alone
+  const _startByteIdleTimer = () => {
+    clearTimeout(_byteIdleTimer);
+    _byteIdleTimer = setTimeout(() => {
+      // Only show if Byte is visible and no bubble is showing
+      if (document.getElementById("byteBubble")) { _startByteIdleTimer(); return; }
+      const btn = document.getElementById("byteFloat");
+      if (!btn) return;
+
+      // Random idle behaviour
+      const roll = Math.random();
+      if (roll < 0.3) {
+        // Byte looks around
+        btn.style.transform = "scale(1.1) rotate(-8deg)";
+        setTimeout(() => { btn.style.transform = "scale(1) rotate(8deg)"; }, 400);
+        setTimeout(() => { btn.style.transform = "scale(1) rotate(0deg)"; }, 800);
+      } else if (roll < 0.5) {
+        // Byte waves
+        btn.style.transform = "scale(1.15) translateY(-4px)";
+        setTimeout(() => { btn.style.transform = "scale(1)"; }, 600);
+        // And says something
+        setTimeout(() => {
+          let qIdx;
+          do { qIdx = Math.floor(Math.random() * _byteIdleQuips.length); } while (qIdx === _byteIdleQuipIdx);
+          _byteIdleQuipIdx = qIdx;
+          const q = _byteIdleQuips[qIdx];
+          showBubble(q[0], q[1], q[2], false);
+        }, 700);
+      } else if (roll < 0.65) {
+        // Byte spins
+        btn.style.transition = "transform 0.5s ease";
+        btn.style.transform  = "scale(1.1) rotate(360deg)";
+        setTimeout(() => {
+          btn.style.transition = "transform 0.2s ease";
+          btn.style.transform  = "scale(1) rotate(0deg)";
+        }, 500);
+      }
+      // Else: silent wiggle, do nothing visible
+
+      _startByteIdleTimer();
+    }, (_byteIdleMin + Math.random() * 60) * 1000);
+  };
+
+  /* ── Show a speech bubble ── */
+  const showBubble = (mood, title, text, showClose = true) => {
+    removeBubble();
+    const bubble = document.createElement("div");
+    bubble.id = "byteBubble";
+    bubble.style.cssText = `
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: min(320px, calc(100vw - 40px));
+      background: #141a16;
+      border: 1px solid rgba(16,185,129,0.4);
+      border-radius: 18px 18px 4px 18px;
+      padding: 16px;
+      z-index: 9001;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(16,185,129,0.1);
+      animation: byteBubbleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    `;
+    bubble.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex-shrink:0;width:36px;height:36px;animation:byteFloat 2s ease-in-out infinite">
+          ${buildByteSVG(mood, 36)}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#10b981;margin-bottom:3px">${title}</div>
+          <div style="font-size:0.84rem;line-height:1.5;color:#eeeef5">${text}</div>
+        </div>
+        ${showClose ? `<button onclick="document.getElementById('byteBubble')?.remove()" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:1rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0">✕</button>` : ""}
+      </div>`;
+    document.body.appendChild(bubble);
+    if (!showClose) setTimeout(removeBubble, 5000);
+  };
+
+  const removeBubble = () => document.getElementById("byteBubble")?.remove();
+
+  /* ── Main tutorial overlay ── */
+  const buildOverlay = () => {
+    // Remove existing
+    document.getElementById("byteTutorialOverlay")?.remove();
+
+    const step = STEPS[currentStep];
+    const mood = step.mood || "happy";
+    const m    = BYTE_MOODS[mood];
+
+    // If there's a highlight target, scroll it into view FIRST (instant),
+    // then measure its position, then paint the overlay. No glitch.
+    const targetEl = step.highlight ? document.querySelector(step.highlight) : null;
+    if (targetEl) {
+      // Scroll so element sits in the upper ~40% of screen, leaving room for card at bottom
+      const elTop    = targetEl.getBoundingClientRect().top + window.scrollY;
+      const vh       = window.innerHeight;
+      const scrollTo = Math.max(0, elTop - vh * 0.15);
+      window.scrollTo({ top: scrollTo, behavior: "instant" });
+    }
+
+    overlayEl = document.createElement("div");
+    overlayEl.id = "byteTutorialOverlay";
+    overlayEl.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99000;
+      pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    `;
+
+    // Dim backdrop
+    const backdrop = document.createElement("div");
+    backdrop.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(2px);
+      pointer-events: all;
+    `;
+
+    // If there's a highlight target, cut a hole AFTER scroll settled
+    let highlightRect = null;
+    if (targetEl) {
+      highlightRect = targetEl.getBoundingClientRect();
+      const pad = 10;
+      const ht = highlightRect.top    - pad;
+      const hl = highlightRect.left   - pad;
+      const hb = highlightRect.bottom + pad;
+      const hr = highlightRect.right  + pad;
+      // Clip-path hole in backdrop
+      backdrop.style.clipPath = `polygon(
+        0% 0%, 100% 0%, 100% 100%, 0% 100%,
+        0% ${ht}px,
+        ${hl}px ${ht}px,
+        ${hl}px ${hb}px,
+        ${hr}px ${hb}px,
+        ${hr}px ${ht}px,
+        0% ${ht}px,
+        0% 0%
+      )`;
+      // Glowing ring around the element
+      const ring = document.createElement("div");
+      ring.style.cssText = `
+        position: fixed;
+        top: ${ht}px;
+        left: ${hl}px;
+        width: ${hr - hl}px;
+        height: ${hb - ht}px;
+        border: 2px solid ${m.glow};
+        border-radius: 12px;
+        box-shadow: 0 0 0 4px ${m.glow}33, 0 0 20px ${m.glow}55;
+        pointer-events: none;
+        z-index: 99002;
+        animation: byteRingPulse 1.5s ease-in-out infinite;
+      `;
+      overlayEl.appendChild(ring);
+    }
+
+    overlayEl.appendChild(backdrop);
+
+    // Card — always fixed at bottom for highlight steps, centred for center steps
+    const card = document.createElement("div");
+    const isCenter = (step.position === "center" || !highlightRect);
+    card.style.cssText = `
+      position: fixed;
+      pointer-events: all;
+      width: min(420px, calc(100vw - 24px));
+      background: var(--bg-panel, #111118);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 20px;
+      padding: 20px 20px 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+      z-index: 99001;
+      left: 50%;
+      ${isCenter
+        ? "top: 50%; transform: translate(-50%, -50%);"
+        : "bottom: 16px; top: auto; transform: translateX(-50%);"}
+    `;
+
+    // Progress dots
+    const dots = STEPS.map((_, i) => 
+      `<div style="width:${i===currentStep?20:7}px;height:7px;border-radius:4px;background:${i===currentStep?m.glow:"rgba(255,255,255,0.15)"};transition:all 0.3s"></div>`
+    ).join("");
+
+    // Animation — slide up from bottom for all steps
+    card.style.animation = isCenter
+      ? "byteCardInCenter 0.35s cubic-bezier(0.34,1.2,0.64,1)"
+      : "byteCardInBottom 0.35s cubic-bezier(0.34,1.2,0.64,1)";
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div style="display:flex;gap:4px;align-items:center">${dots}</div>
+        <button id="byteTutSkip" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:0.72rem;cursor:pointer;font-family:inherit;padding:2px 6px;border-radius:6px;transition:color 0.2s" onmouseover="this.style.color='rgba(255,255,255,0.5)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">Skip tutorial</button>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+        <div id="byteCharInCard" style="flex-shrink:0;animation:byteFloat 2.5s ease-in-out infinite">
+          ${buildByteSVG(mood, 60)}
+        </div>
+        <div style="flex:1;padding-top:4px">
+          <div style="font-size:0.95rem;font-weight:900;color:var(--text,#eeeef5);margin-bottom:6px;line-height:1.3">${step.title}</div>
+          <div style="font-size:0.82rem;line-height:1.5;color:var(--text-muted,#9aa4b2)">${step.text}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center">
+        ${currentStep > 0 ? `<button id="bytePrevBtn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border-radius:12px;padding:10px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit">← Back</button>` : ""}
+        <button id="byteNextBtn" style="flex:1;background:${m.glow};color:#000;border:none;border-radius:12px;padding:12px 20px;font-size:0.92rem;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px ${m.glow}55;transition:all 0.2s"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px ${m.glow}77'"
+          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px ${m.glow}55'">
+          ${step.action}
+        </button>
+      </div>`;
+
+    overlayEl.appendChild(card);
+    document.body.appendChild(overlayEl);
+    isOpen = true;
+
+    // Wire up buttons
+    document.getElementById("byteNextBtn")?.addEventListener("click", nextStep);
+    document.getElementById("bytePrevBtn")?.addEventListener("click", prevStep);
+    document.getElementById("byteTutSkip")?.addEventListener("click", () => {
+      if (confirm("Skip the tutorial? You can restart it anytime by tapping Byte in the corner.")) {
+        endTutorial(false);
+      }
+    });
+  };
+
+  const nextStep = () => {
+    if (currentStep >= STEPS.length - 1) {
+      endTutorial(true);
+      return;
+    }
+    currentStep++;
+    buildOverlay();
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) { currentStep--; buildOverlay(); }
+  };
+
+  const endTutorial = (completed) => {
+    document.getElementById("byteTutorialOverlay")?.remove();
+    isOpen = false;
+    const state = getTutState();
+    state.done      = true;
+    state.completed = completed;
+    state.doneAt    = Date.now();
+    saveTutState(state);
+
+    if (completed) {
+      // Celebration bubble
+      setTimeout(() => {
+        showBubble("cheer", "Tutorial complete! 🎉", "You're ready to build amazing habits. I'll be right here in the corner whenever you need a tip. Now go crush it! 💪", true);
+      }, 300);
+    }
+  };
+
+  /* ── Inject global CSS ── */
+  const injectCSS = () => {
+    if (document.getElementById("byteCSS")) return;
+    const style = document.createElement("style");
+    style.id = "byteCSS";
+    style.textContent = `
+      @keyframes byteFloat {
+        0%, 100% { transform: translateY(0px); }
+        50%       { transform: translateY(-8px); }
+      }
+      @keyframes byteCardInCenter {
+        from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)) scale(0.92); }
+        to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      @keyframes byteCardInSlide {
+        from { opacity: 0; transform: translateY(16px) scale(0.94); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes byteCardInBottom {
+        from { opacity: 0; transform: translateX(-50%) translateY(24px) scale(0.96); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
+      }
+      @keyframes byteBubbleIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.9); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes byteRingPulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 4px rgba(74,222,128,0.2), 0 0 20px rgba(74,222,128,0.3); }
+        50%       { opacity: 0.7; box-shadow: 0 0 0 8px rgba(74,222,128,0.1), 0 0 30px rgba(74,222,128,0.2); }
+      }
+      #byteFloat {
+        filter: drop-shadow(0 4px 12px rgba(16,185,129,0.4));
+      }
+
+    `;
+    document.head.appendChild(style);
+  };
+
+  /* ── Public API ── */
+  const start = (force = false) => {
+    const state = getTutState();
+    if (state.done && !force) return;
+    injectCSS();
+    currentStep = 0;
+    buildOverlay();
+  };
+
+  const restart = () => {
+    saveTutState({});
+    start(true);
+  };
+
+  const init = () => {
+    injectCSS();
+    // Always show floating Byte
+    if (!document.getElementById("byteFloat")) {
+      buildFloatingByte();
+    }
+    // Auto-start for new users
+    const state = getTutState();
+    if (!state.done) {
+      setTimeout(() => start(), 1800); // After mood popup settles
+    }
+  };
+
+  return { init, start, restart, showBubble, buildByteSVG, _startIdleTimer: () => _startByteIdleTimer() };
+})();
+
+window.ByteTutorial = ByteTutorial;
+
+  </script>
+  <script>
+    // Load notifications.js only if served over HTTP (not file://)
+    if (location.protocol !== 'file:') {
+      const ns = document.createElement('script');
+      ns.src = 'notifications.js';
+      document.head.appendChild(ns);
+    }
+  </script>
+  <script src="habitsecurity.js"></script>
+  <script src="habitpremium.js"></script>
+  <script src="js/ad-popup.js"></script>
+  <script src="js/monthly.js"></script>
+
+
+  <!-- NOTE MODAL -->
+  <div id="noteModal" class="hidden">
+    <div class="note-modal-box">
+      <div class="note-modal-title" id="noteModalTitle">Note</div>
+      <textarea id="noteTextarea" placeholder="Add a note for this day..."></textarea>
+      <div class="note-modal-actions">
+        <button class="note-btn note-btn-delete" id="noteDeleteBtn" onclick="window._noteDelete()" style="display:none">Delete</button>
+        <button class="note-btn note-btn-cancel" onclick="window._noteClose()">Cancel</button>
+        <button class="note-btn note-btn-save"   onclick="window._noteSave()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFLECTION MODAL -->
+  <div id="reflectionModal" class="hidden">
+    <div class="reflection-box">
+      <div class="reflection-header">
+        <div style="font-size:2rem;margin-bottom:8px">📓</div>
+        <div class="reflection-title">Monthly Reflection</div>
+        <div class="reflection-sub" id="reflectionSubtitle"></div>
+      </div>
+      <div class="reflection-stats" id="reflectionStats"></div>
+      <div class="reflection-q">
+        <label>🏆 What went well this month?</label>
+        <textarea id="reflQ1" placeholder="I was consistent with..."></textarea>
+      </div>
+      <div class="reflection-q">
+        <label>⚡ What was your biggest challenge?</label>
+        <textarea id="reflQ2" placeholder="I struggled with..."></textarea>
+      </div>
+      <div class="reflection-q">
+        <label>🎯 What's your focus for next month?</label>
+        <textarea id="reflQ3" placeholder="Next month I want to..."></textarea>
+      </div>
+      <button class="reflection-save-btn" onclick="window._reflectionSave()">Save Reflection ✓</button>
+    </div>
+  </div>
+
+  <!-- SHARE CARD MODAL -->
+  <div id="shareCardModal" class="hidden">
+    <div class="share-modal-box">
+      <div style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:14px">Your Profile Card</div>
+      <canvas id="shareCanvas" height="280"></canvas>
+      <div class="share-actions">
+        <button class="share-btn share-btn-dl" onclick="window._shareDownload()">⬇ Download</button>
+        <button class="share-btn share-btn-cl" onclick="document.getElementById('shareCardModal').classList.add('hidden')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAGUE DASHBOARD MODAL -->
+  <div id="leagueModal" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);overflow-y:auto;" onclick="window._leagueModalBgClick(event)">
+    <div id="leagueModalInner" style="
+      max-width:700px;margin:40px auto;
+      background:var(--bg-panel,#121212);
+      border:1px solid var(--border-soft);
+      border-radius:20px;padding:28px 24px;
+      position:relative;animation:leagueModalIn 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+      <button onclick="window.closeLeagueDashboard()" style="
+        position:absolute;top:14px;right:16px;
+        background:none;border:none;color:var(--text-muted);
+        font-size:1.3rem;cursor:pointer;line-height:1;">&times;</button>
+      <div id="leagueModalContent"></div>
+    </div>
+  </div>
+<script>
+  // ── PWA: Only works over HTTP/HTTPS, not file:// ──
+  if ("serviceWorker" in navigator && location.protocol !== 'file:') {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js")
+        .then(reg => {
+          // Check for updates
+          reg.addEventListener("updatefound", () => {
+            const nw = reg.installing;
+            nw.addEventListener("statechange", () => {
+              if (nw.state === "installed" && navigator.serviceWorker.controller) {
+                // New version available — show subtle toast
+                const t = document.createElement("div");
+                t.style.cssText = "position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(76,175,80,0.4);color:#4ade80;padding:8px 18px;border-radius:12px;font-size:0.8rem;font-weight:700;z-index:99999;cursor:pointer;";
+                t.textContent = "🔄 Update available — tap to reload";
+                t.onclick = () => window.location.reload();
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 8000);
+              }
+            });
+          });
+        })
+        .catch(() => {}); // silent fail
+    });
+  }
+
+  // ── PWA: Install prompt (only over HTTP) ──
+  let _installPrompt = null;
+  window._installPWA = () => {};
+  if (location.protocol !== 'file:') {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      _installPrompt = e;
+      const btn = document.getElementById("pwaInstallBtn");
+      if (btn) btn.style.display = "flex";
+    });
+    window.addEventListener("appinstalled", () => {
+      const btn = document.getElementById("pwaInstallBtn");
+      if (btn) btn.style.display = "none";
+      _installPrompt = null;
+    });
+    window._installPWA = () => {
+      if (!_installPrompt) return;
+      _installPrompt.prompt();
+      _installPrompt.userChoice.then(r => {
+        if (r.outcome === "accepted") {
+          document.getElementById("pwaInstallBtn")?.remove();
+        }
+        _installPrompt = null;
+      });
+    };
+  }
+</script>
+
+<script>
+/* ── Page transition handler ── */
+(function() {
+  // page-enter handled by loader system - skip
+
+  // Intercept all internal navigation links
+  document.addEventListener("click", function(e) {
+    const a = e.target.closest("a[href]");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("javascript")) return;
+    if (a.target === "_blank") return;
+    e.preventDefault();
+    document.body.classList.add("page-leave");
+    setTimeout(() => { window.location.href = href; }, 180);
+  });
+})();
+
+
+/* ─── CUSTOM CATEGORIES (Premium) ───────────────────────── */
+const CC_KEY = 'habitCustomCategories_' + (authUser?.id || 'guest');
+const CC_EMOJIS = ['⭐','🎯','🏋️','🧠','💡','🎨','🎮','🌿','🔥','💎','🚗','✈️','🏠','🎵','📝','🌙','☀️','🦋','🌈','💜'];
+const CC_COLOURS = ['#10b981','#0ea5e9','#a855f7','#ec4899','#ef4444','#f97316','#f59e0b','#14b8a6','#6366f1','#f43f5e'];
+
+let ccSelectedEmoji = '⭐';
+let ccSelectedColour = '#10b981';
+
+const getCustomCats = () => { try { return JSON.parse(localStorage.getItem(CC_KEY) || '[]'); } catch(e) { return []; } };
+const saveCustomCats = (arr) => localStorage.setItem(CC_KEY, JSON.stringify(arr));
+
+const openCustomCatPicker = () => {
+  if (window.HabitPremium && !window.HabitPremium.isPremium()) {
+    window.HabitPremium.showUpgradeWall('customCategories');
+    return;
+  }
+  ccSelectedEmoji = '⭐';
+  ccSelectedColour = '#10b981';
+  document.getElementById('ccEmojiCustom').value = '';
+  document.getElementById('ccName').value = '';
+
+  // Render emoji grid
+  const eg = document.getElementById('ccEmojiGrid');
+  eg.innerHTML = '';
+  CC_EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.textContent = em;
+    btn.style.cssText = 'width:36px;height:36px;border-radius:8px;border:2px solid transparent;' +
+      'background:rgba(255,255,255,0.05);font-size:1.1rem;cursor:pointer;transition:all 0.12s';
+    btn.onclick = () => {
+      ccSelectedEmoji = em;
+      document.getElementById('ccEmojiCustom').value = '';
+      eg.querySelectorAll('button').forEach(b => b.style.borderColor = 'transparent');
+      btn.style.borderColor = '#10b981';
+      updateCcPreview();
+    };
+    if (em === ccSelectedEmoji) btn.style.borderColor = '#10b981';
+    eg.appendChild(btn);
+  });
+
+  // Render colour grid
+  const cg = document.getElementById('ccColourGrid');
+  cg.innerHTML = '';
+  CC_COLOURS.forEach(col => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:28px;height:28px;border-radius:50%;background:'+col+';' +
+      'border:2px solid '+(col===ccSelectedColour?'#fff':'transparent')+';cursor:pointer;transition:all 0.12s';
+    btn.onclick = () => {
+      ccSelectedColour = col;
+      cg.querySelectorAll('button').forEach(b => b.style.borderColor = 'transparent');
+      btn.style.borderColor = '#fff';
+      updateCcPreview();
+    };
+    cg.appendChild(btn);
+  });
+
+  updateCcPreview();
+  const modal = document.getElementById('customCatModal');
+  modal.style.display = 'flex';
+};
+window.openCustomCatPicker = openCustomCatPicker;
+
+const updateCcPreview = () => {
+  const customEmoji = document.getElementById('ccEmojiCustom').value.trim();
+  if (customEmoji) ccSelectedEmoji = customEmoji;
+  const name = document.getElementById('ccName').value.trim() || 'My Category';
+  const prev = document.getElementById('ccPreview');
+  prev.textContent = ccSelectedEmoji + ' ' + name;
+  prev.style.background = ccSelectedColour + '22';
+  prev.style.color = ccSelectedColour;
+};
+window.updateCcPreview = updateCcPreview;
+
+const saveCustomCategory = () => {
+  const name = document.getElementById('ccName').value.trim();
+  if (!name) { document.getElementById('ccName').focus(); return; }
+  const customEmoji = document.getElementById('ccEmojiCustom').value.trim();
+  if (customEmoji) ccSelectedEmoji = customEmoji;
+
+  const cats = getCustomCats();
+  const id = 'custom_' + Date.now();
+  cats.push({ id, emoji: ccSelectedEmoji, name, colour: ccSelectedColour });
+  saveCustomCats(cats);
+
+  document.getElementById('customCatModal').style.display = 'none';
+  renderCustomCatBtns();
+
+  // Auto-select the new category
+  document.querySelectorAll('.hm-cat-btn').forEach(b => b.classList.remove('active'));
+  const newBtn = document.querySelector('[data-cat="'+id+'"]');
+  if (newBtn) { newBtn.classList.add('active'); document.getElementById('habitCategorySelect').value = id; }
+};
+window.saveCustomCategory = saveCustomCategory;
+
+const renderCustomCatBtns = () => {
+  const grid = document.getElementById('hmCustomCatBtns');
+  if (!grid) return;
+  const cats = getCustomCats();
+  grid.innerHTML = '';
+  // Also sync hidden select
+  const sel = document.getElementById('habitCategorySelect');
+  // Remove old custom options
+  Array.from(sel.options).forEach(o => { if (o.value.startsWith('custom_')) sel.remove(o.index); });
+  cats.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'hm-cat-btn';
+    btn.dataset.cat = c.id;
+    btn.textContent = c.emoji + ' ' + c.name;
+    btn.style.borderColor = c.colour + '66';
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.hm-cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('habitCategorySelect').value = c.id;
+    });
+    grid.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.emoji + ' ' + c.name;
+    sel.appendChild(opt);
+  });
+};
+
+// Render custom cats on habit modal open
+const _origHmOpen = window.openHabitModal || (() => {});
+window.openHabitModal = function() { _origHmOpen.apply(this, arguments); renderCustomCatBtns(); };
+
+// Also render on page load (for existing custom cats)
+document.addEventListener('DOMContentLoaded', () => { renderCustomCatBtns(); });
+
+</script>
+
+
+
+<!-- ── CUSTOM CATEGORY PICKER ──────────────────────── -->
+<div id="customCatModal" style="display:none;position:fixed;inset:0;z-index:200000;
+  background:rgba(0,0,0,0.85);backdrop-filter:blur(16px);
+  align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:var(--bg-card,#1a1a2e);border-radius:20px;width:min(340px,96vw);
+    padding:22px;border:1px solid var(--border,rgba(255,255,255,0.08))">
+    <div style="font-size:1rem;font-weight:900;color:var(--text,#f0f0f8);margin-bottom:16px">
+      ✨ Create Category
+    </div>
+    <!-- Emoji picker -->
+    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:0.08em;color:var(--text-muted,#6b7280);margin-bottom:8px">Choose Icon</div>
+    <div id="ccEmojiGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input id="ccEmojiCustom" type="text" maxlength="2" placeholder="Or type emoji"
+        style="width:70px;flex-shrink:0;padding:10px;background:var(--bg-panel,#121220);
+          border:1.5px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;
+          color:var(--text,#f0f0f8);font-size:1.2rem;text-align:center;font-family:inherit;outline:none"
+        oninput="updateCcPreview()">
+      <input id="ccName" type="text" maxlength="20" placeholder="Category name"
+        style="flex:1;padding:10px 14px;background:var(--bg-panel,#121220);
+          border:1.5px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;
+          color:var(--text,#f0f0f8);font-size:0.9rem;font-family:inherit;outline:none"
+        oninput="updateCcPreview()">
+    </div>
+    <!-- Colour swatches -->
+    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:0.08em;color:var(--text-muted,#6b7280);margin-bottom:8px">Colour</div>
+    <div id="ccColourGrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px"></div>
+    <!-- Preview -->
+    <div style="text-align:center;margin-bottom:18px">
+      <span id="ccPreview" style="display:inline-block;padding:8px 16px;border-radius:20px;
+        font-size:0.88rem;font-weight:800;background:rgba(16,185,129,0.15);color:#10b981">
+        🌟 Preview
+      </span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveCustomCategory()"
+        style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#059669);
+          color:#fff;border:none;border-radius:12px;font-weight:900;font-size:0.88rem;
+          cursor:pointer;font-family:inherit">Save Category</button>
+      <button onclick="document.getElementById('customCatModal').style.display='none'"
+        style="padding:12px 16px;background:var(--bg-panel,#121220);
+          border:1.5px solid var(--border,rgba(255,255,255,0.08));color:var(--text-muted,#6b7280);
+          border-radius:12px;font-weight:700;font-size:0.82rem;cursor:pointer;font-family:inherit">
+        Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

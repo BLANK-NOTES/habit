@@ -1,0 +1,287 @@
+/* =========================
+   GLOBAL RESET
+   ========================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================
+   ROOT & BODY
+   ========================= */
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+/* =========================
+   BASE VARIABLES (DARK DEFAULT)
+   ========================= */
+:root {
+  --bg-main: #0f1115;
+  --bg-card: #181b22;
+  --bg-input: #1f2430;
+
+  --text-main: #ffffff;
+  --text-muted: #9aa4b2;
+
+  --accent: #4ade80;
+  --danger: #ef4444;
+
+  --done: #4ade80;
+  --missed: #f87171;
+  --unmarked: #475569;
+
+  --border: #2a2f3a;
+  --radius: 10px;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+.app-header {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* =========================
+   MAIN WRAPPER
+   ========================= */
+.app-main {
+  max-width: 100%;
+  padding: 1rem;
+}
+
+/* =========================
+   MONTH HEADER
+   ========================= */
+#monthHeader {
+  margin-bottom: 0.75rem;
+}
+
+.month-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.month-stats {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.month-stats span {
+  color: var(--text-muted);
+}
+
+.month-stats .done {
+  color: var(--done);
+}
+
+.month-stats .missed {
+  color: var(--missed);
+}
+
+.month-stats .unmarked {
+  color: var(--unmarked);
+}
+
+/* =========================
+   TASK GRID CONTAINER
+   ========================= */
+#taskGrid {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  background: var(--bg-card);
+}
+
+/* =========================
+   GRID ROW
+   ========================= */
+.grid-row {
+  display: grid;
+  grid-template-columns: 220px repeat(31, 1fr);
+  min-height: 30px;
+}
+
+.grid-row.header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+
+/* =========================
+   TASK CELL (LEFT)
+   ========================= */
+.task-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border-right: 1px solid var(--border);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.task-cell.header {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.task-weekly {
+  color: var(--text-muted);
+}
+
+.task-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delete-task {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+
+/* =========================
+   DAY CELL
+   ========================= */
+.day-cell {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  height: 100%;
+}
+
+.day-cell.header {
+  font-size: 0.65rem;
+  text-align: center;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* =========================
+   DAY STATES
+   ========================= */
+.day-cell.done {
+  background: var(--done);
+}
+
+.day-cell.missed {
+  background: var(--missed);
+}
+
+.day-cell.unmarked {
+  background: var(--unmarked);
+}
+
+/* =========================
+   SUMMARY TABLE
+   ========================= */
+#summaryTable {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.summary-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.7rem;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid var(--border);
+  padding: 0.25rem;
+  text-align: center;
+}
+
+.summary-table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}
+
+.summary-table tr.done td {
+  color: var(--done);
+}
+
+.summary-table tr.missed td {
+  color: var(--missed);
+}
+
+.summary-table tr.unmarked td {
+  color: var(--unmarked);
+}
+
+/* =========================
+   MONTH BUTTONS
+   ========================= */
+#monthButtons {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+#monthButtons button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+#monthButtons button:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+.app-footer {
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* =========================
+   MOBILE FALLBACK
+   ========================= */
+@media (max-width: 900px) {
+  .grid-row {
+    grid-template-columns: 180px repeat(31, 28px);
+  }
+}

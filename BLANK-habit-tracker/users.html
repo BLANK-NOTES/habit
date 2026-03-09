@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find Friends · Habit Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0c0c14;
+    --panel:    #121220;
+    --card:     #1a1a2e;
+    --border:   rgba(255,255,255,0.08);
+    --text:     #f0f0f8;
+    --muted:    #6b7280;
+    --primary:  #4CAF50;
+    --primary-dim: rgba(76,175,80,0.12);
+    --radius:   14px;
+  }
+
+  [data-theme="light"]   { --bg:#f4f4f8; --panel:#fff; --card:#f0f0f6; --border:rgba(0,0,0,0.1); --text:#111; --muted:#666; }
+  [data-theme="pink"]    { --bg:#1a0a14; --panel:#200d18; --card:#2a1020; --border:rgba(255,100,150,0.15); --primary:#f472b6; --primary-dim:rgba(244,114,182,0.12); }
+  [data-theme="blue"]    { --bg:#0a1020; --panel:#0d1628; --card:#101e34; --border:rgba(100,160,255,0.12); --primary:#60a5fa; --primary-dim:rgba(96,165,250,0.12); }
+  [data-theme="yellow"]  { --bg:#14120a; --panel:#1c1908; --card:#26230e; --border:rgba(250,200,20,0.12); --primary:#fbbf24; --primary-dim:rgba(251,191,36,0.12); }
+  [data-theme="army"]    { --bg:#0e100a; --panel:#141810; --card:#1c2214; --border:rgba(120,160,80,0.12); --primary:#84cc16; --primary-dim:rgba(132,204,22,0.12); }
+  [data-theme="ferrari"] { --bg:#120808; --panel:#1a0c0c; --card:#221010; --border:rgba(255,60,60,0.12); --primary:#ef4444; --primary-dim:rgba(239,68,68,0.12); }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 10px;
+    padding: 7px 14px; font-size: 0.82rem; font-weight: 600;
+    text-decoration: none; cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .back-btn:hover { color: var(--text); border-color: var(--primary); }
+
+  .page-title { font-size: 1.15rem; font-weight: 900; flex: 1; }
+
+  /* ── BODY ── */
+  .page-body {
+    max-width: 600px; margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* ── SEARCH BAR ── */
+  .search-wrap {
+    position: relative; margin-bottom: 24px;
+  }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem; pointer-events: none; opacity: 0.45;
+  }
+  #searchInput {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 1rem;
+    padding: 13px 14px 13px 42px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  #searchInput:focus { border-color: var(--primary); }
+  .search-clear {
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer; color: var(--muted); font-size: 1.1rem;
+    display: none;
+  }
+  .search-clear.show { display: block; }
+
+  /* ── RESULTS ── */
+  #resultsArea { display: flex; flex-direction: column; gap: 10px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 52px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .empty-sub { font-size: 0.82rem; }
+
+  /* ── USER CARD ── */
+  .user-card {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.18s;
+    animation: cardIn 0.3s ease;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .user-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-dim);
+  }
+
+  .user-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--primary);
+    font-size: 1.8rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .user-info { flex: 1; min-width: 0; }
+  .user-name {
+    font-size: 0.95rem; font-weight: 800;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .user-handle {
+    font-size: 0.75rem; color: var(--muted); margin-top: 1px;
+  }
+  .user-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .user-badge {
+    font-size: 0.58rem; font-weight: 800;
+    padding: 1px 6px; border-radius: 6px;
+    border: 1px solid;
+  }
+
+  .user-arrow { color: var(--muted); font-size: 1.1rem; }
+
+  .friend-btn {
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 800;
+    cursor: pointer; border: none; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .friend-btn.add      { background: var(--primary); color:#fff; }
+  .friend-btn.add:hover{ opacity:0.85; }
+  .friend-btn.pending  { background: rgba(250,204,21,0.15); color:#facc15; border:1px solid #facc1540; cursor:default; }
+  .friend-btn.friends  { background: rgba(74,222,128,0.15); color:#4ade80; border:1px solid #4ade8040; cursor:default; }
+  .friend-btn.incoming { background: rgba(96,165,250,0.2);  color:#60a5fa; border:1px solid #60a5fa40; }
+
+  /* ═══════════════════════════════════════
+     PROFILE VIEW (slide-in panel)
+  ═══════════════════════════════════════ */
+  #profileOverlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  #profileOverlay.hidden { display: none; }
+
+  .profile-sheet {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 22px 22px 0 0;
+    width: min(600px, 100%);
+    max-height: 88vh;
+    overflow-y: auto;
+    animation: sheetUp 0.35s cubic-bezier(0.34,1.2,0.64,1);
+    padding-bottom: 32px;
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* Banner */
+  .profile-banner {
+    height: 100px;
+    border-radius: 22px 22px 0 0;
+    position: relative;
+  }
+
+  .profile-close {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(0,0,0,0.4);
+    border: none; color: #fff; border-radius: 50%;
+    width: 32px; height: 32px; font-size: 1rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .profile-close:hover { background: rgba(0,0,0,0.7); }
+
+  .profile-avatar-wrap {
+    margin: -30px 0 0 20px;
+    position: relative; display: inline-block;
+  }
+  .profile-avatar-big {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--card);
+    border: 3px solid var(--panel);
+    font-size: 2.4rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .profile-names {
+    padding: 10px 20px 16px;
+  }
+  .profile-display-name { font-size: 1.3rem; font-weight: 900; }
+  .profile-username { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .profile-status {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 10px;
+    background: var(--primary-dim);
+    color: var(--primary); border: 1px solid var(--primary);
+  }
+
+  /* Stats grid */
+  .profile-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    margin: 0 20px; border-radius: 12px; overflow: hidden;
+  }
+  .pstat {
+    background: var(--card);
+    padding: 12px 6px; text-align: center;
+  }
+  .pstat-val { font-size: 1.2rem; font-weight: 900; }
+  .pstat-lbl { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  /* Recent activity */
+  .profile-section-title {
+    font-size: 0.65rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); padding: 18px 20px 8px;
+  }
+
+  .activity-grid {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    padding: 0 20px;
+  }
+  .act-cell {
+    width: 14px; height: 14px; border-radius: 3px;
+    background: var(--card);
+  }
+  .act-cell.l1 { background: color-mix(in srgb, var(--primary) 25%, transparent); }
+  .act-cell.l2 { background: color-mix(in srgb, var(--primary) 50%, transparent); }
+  .act-cell.l3 { background: color-mix(in srgb, var(--primary) 75%, transparent); }
+  .act-cell.l4 { background: var(--primary); }
+
+  .badges-grid {
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px;
+  }
+  .badge-chip {
+    font-size: 0.72rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 10px;
+    border: 1px solid;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a href="settings.html" class="back-btn">← Settings</a>
+  <div class="page-title">👥 Find Friends</div>
+</header>
+
+<div class="page-body">
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput"
+           placeholder="Enter exact @username to find…"
+           autocomplete="off" autocorrect="off" spellcheck="false">
+    <span class="search-clear" id="clearBtn" onclick="clearSearch()">✕</span>
+  </div>
+
+  <div id="resultsArea">
+    <div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <div class="empty-title">Find by username</div>
+      <div class="empty-sub">Enter an exact @username — usernames are private</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PROFILE OVERLAY -->
+<div id="profileOverlay" class="hidden" onclick="handleOverlayClick(event)">
+  <div class="profile-sheet" id="profileSheet">
+
+    <div class="profile-banner" id="profileBanner">
+      <button class="profile-close" onclick="closeProfile()">✕</button>
+    </div>
+
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar-big" id="profileAvatar">😊</div>
+    </div>
+
+    <div class="profile-names">
+      <div class="profile-display-name" id="profileName">—</div>
+      <div class="profile-username"     id="profileHandle">@—</div>
+      <div class="profile-status"       id="profileStatus" style="display:none"></div>
+    </div>
+
+    <div class="profile-stats" id="profileStats"></div>
+
+    <div class="profile-section-title">Activity — Last 30 Days</div>
+    <div class="activity-grid" id="activityGrid"></div>
+
+    <div class="profile-section-title">Badges</div>
+    <div class="badges-grid" id="profileBadges"></div>
+
+  </div>
+</div>
+
+<script>
+  const authUser = JSON.parse(localStorage.getItem("auth_user"));
+  if (!authUser) window.location.href = "auth.html";
+
+  const savedTheme = localStorage.getItem("habitTheme") || "dark";
+  document.body.setAttribute("data-theme", savedTheme);
+
+  /* ── Storage helpers ── */
+  const getUsers     = () => JSON.parse(localStorage.getItem("habitTracker_users"))     || {};
+  const getUsernames = () => JSON.parse(localStorage.getItem("habitTracker_usernames")) || {};
+  const getUserData  = (uid) => JSON.parse(localStorage.getItem(`habitTracker_${uid}`)) || {};
+
+  const saveUsers     = (v) => localStorage.setItem("habitTracker_users",     JSON.stringify(v));
+  const saveUsernames = (v) => localStorage.setItem("habitTracker_usernames", JSON.stringify(v));
+  const saveEmails    = (v) => localStorage.setItem("habitTracker_emails",    JSON.stringify(v));
+  const getEmails     = () => JSON.parse(localStorage.getItem("habitTracker_emails")) || {};
+
+  /* ── Auto-register current user if not in registry ── */
+  const ensureCurrentUserRegistered = () => {
+    if (!authUser?.id) return;
+    const users = getUsers();
+    if (users[authUser.id]) return; // already there
+
+    // Pull extra profile info from their habit data
+    const habitData = getUserData(authUser.id);
+    const profile   = habitData.profile || {};
+
+    // Build a username from name/email if they don't have one
+    let username = authUser.username || profile.username;
+    if (!username) {
+      const base = (authUser.name || authUser.email?.split("@")[0] || "user")
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "_")
+        .slice(0, 18);
+      username = base || "user";
+      // Make unique if taken
+      const usernames = getUsernames();
+      let candidate = username;
+      let n = 1;
+      while (usernames[candidate] && usernames[candidate] !== authUser.id) {
+        candidate = username + n++;
+      }
+      username = candidate;
+      // Save username back to session
+      authUser.username = username;
+      localStorage.setItem("auth_user", JSON.stringify(authUser));
+    }
+
+    const user = {
+      id:        authUser.id,
+      username:  username.toLowerCase(),
+      name:      authUser.name || username,
+      email:     authUser.email || "",
+      avatar:    authUser.avatar || profile.avatar || "😊",
+      pwHash:    null, // legacy — no password hash, can set via settings
+      createdAt: new Date().toISOString(),
+      legacy:    true,
+    };
+
+    const users2 = getUsers();
+    users2[authUser.id] = user;
+    saveUsers(users2);
+
+    const usernames2 = getUsernames();
+    usernames2[username.toLowerCase()] = authUser.id;
+    saveUsernames(usernames2);
+
+    if (authUser.email) {
+      const emails = getEmails();
+      emails[authUser.email.toLowerCase()] = authUser.id;
+      saveEmails(emails);
+    }
+
+    console.log("Auto-registered user:", username);
+  };
+
+  // init called at bottom after all functions are defined
+
+  /* ── Search ── */
+  let _searchTimer = null;
+
+  const handleSearch = (val) => {
+    document.getElementById("clearBtn").className =
+      "search-clear" + (val ? " show" : "");
+
+    clearTimeout(_searchTimer);
+    if (!val.trim()) {
+      showAllUsers();
+      return;
+    }
+    _searchTimer = setTimeout(() => runSearch(val.trim().toLowerCase()), 200);
+  };
+
+  const clearSearch = () => {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("clearBtn").className = "search-clear";
+    showEmpty("👥", "Find habit builders", "Type a username to search");
+  };
+
+  const getSocial  = () => JSON.parse(localStorage.getItem(`habitSocial_${authUser.id}`))  || { friends:[], sentRequests:[], receivedRequests:[] };
+  const saveSocial = (v) => localStorage.setItem(`habitSocial_${authUser.id}`, JSON.stringify(v));
+
+  const getOtherSocial  = (uid) => JSON.parse(localStorage.getItem(`habitSocial_${uid}`))  || { friends:[], sentRequests:[], receivedRequests:[] };
+  const saveOtherSocial = (uid, v) => localStorage.setItem(`habitSocial_${uid}`, JSON.stringify(v));
+
+  const runSearch = (query) => {
+    const q = query.trim().toLowerCase().replace(/^@/, "");
+    if (!q) { showEmpty("👥", "Find by username", "Enter an exact @username — usernames are private"); return; }
+
+    const usernames = getUsernames();
+    const users     = getUsers();
+    const uid       = usernames[q];
+
+    if (!uid || uid === authUser.id) {
+      showEmpty("🔎", "No user found", `No account with username "@${q}"`);
+      return;
+    }
+
+    const user = users[uid];
+    if (!user) { showEmpty("🔎", "User not found", "They may not have set up their profile yet"); return; }
+
+    renderResults([user], q);
+  };
+
+  const showAllUsers = () => {
+    showEmpty("👥", "Find by username", "Enter an exact @username — usernames are private");
+  };
+
+  const showEmpty = (icon, title, sub) => {
+    document.getElementById("resultsArea").innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">${icon}</div>
+        <div class="empty-title">${title}</div>
+        <div class="empty-sub">${sub}</div>
+      </div>`;
+  };
+
+  const getFriendStatus = (uid) => {
+    const social = getSocial();
+    if (social.friends.includes(uid))         return "friends";
+    if (social.sentRequests.includes(uid))    return "pending";
+    if (social.receivedRequests.includes(uid))return "incoming";
+    return "none";
+  };
+
+  const sendFriendRequest = (uid, btn) => {
+    const social = getSocial();
+    if (social.friends.includes(uid) || social.sentRequests.includes(uid)) return;
+
+    // Add to my sent
+    if (!social.sentRequests.includes(uid)) social.sentRequests.push(uid);
+    saveSocial(social);
+
+    // Add to their received
+    const them = getOtherSocial(uid);
+    if (!them.receivedRequests.includes(authUser.id)) them.receivedRequests.push(authUser.id);
+    saveOtherSocial(uid, them);
+
+    btn.textContent = "⏳ Pending";
+    btn.disabled    = true;
+    btn.style.opacity = "0.6";
+  };
+
+  const renderResults = (users, query) => {
+    const area = document.getElementById("resultsArea");
+    area.innerHTML = "";
+
+    users.forEach((user, i) => {
+      const card = document.createElement("div");
+      card.className = "user-card";
+      card.style.animationDelay = (i * 40) + "ms";
+
+      const userData = getUserData(user.id);
+      const profile  = userData.profile || {};
+      const xp       = userData.xp || { level: 1, lifetimeXP: 0 };
+      const league   = getLeagueName(xp.lifetimeXP || 0);
+      const badges   = getEarnedBadges(userData);
+      const status   = getFriendStatus(user.id);
+
+      const btnHtml = {
+        friends:  `<button class="friend-btn friends" disabled>✓ Friends</button>`,
+        pending:  `<button class="friend-btn pending" disabled>⏳ Pending</button>`,
+        incoming: `<button class="friend-btn incoming" data-uid="${user.id}">Accept ✓</button>`,
+        none:     `<button class="friend-btn add" data-uid="${user.id}">+ Add Friend</button>`,
+      }[status];
+
+      card.innerHTML = `
+        <div class="user-avatar">${user.avatar || profile.avatar || "😊"}</div>
+        <div class="user-info">
+          <div class="user-name">${escHtml(user.name || user.username)}</div>
+          <div class="user-handle">@${escHtml(user.username)}</div>
+          <div class="user-badges">
+            ${badges.slice(0,2).map(b =>
+              `<span class="user-badge" style="color:${b.color};border-color:${b.color}44;background:${b.color}18">${b.label}</span>`
+            ).join("")}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <div style="font-size:0.65rem;color:${league.color};font-weight:700">${league.emoji} ${league.name}</div>
+          ${btnHtml}
+        </div>`;
+
+      // Friend button logic
+      const btn = card.querySelector(".friend-btn");
+      if (btn && !btn.disabled) {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const uid = btn.dataset.uid;
+          if (btn.classList.contains("add")) {
+            sendFriendRequest(uid, btn);
+          } else if (btn.classList.contains("incoming")) {
+            acceptFriendRequest(uid, btn);
+          }
+        });
+      }
+
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".friend-btn")) return;
+        openProfile(user.id);
+      });
+      area.appendChild(card);
+    });
+  };
+
+  const acceptFriendRequest = (uid, btn) => {
+    const social = getSocial();
+    social.receivedRequests = social.receivedRequests.filter(id => id !== uid);
+    if (!social.friends.includes(uid)) social.friends.push(uid);
+    saveSocial(social);
+
+    const them = getOtherSocial(uid);
+    them.sentRequests = them.sentRequests.filter(id => id !== authUser.id);
+    if (!them.friends.includes(authUser.id)) them.friends.push(authUser.id);
+    saveOtherSocial(uid, them);
+
+    btn.textContent = "✓ Friends";
+    btn.className   = "friend-btn friends";
+    btn.disabled    = true;
+  };
+
+  /* ── Profile sheet ── */
+  const openProfile = (uid) => {
+    const users   = getUsers();
+    const user    = users[uid];
+    if (!user) return;
+
+    const userData = getUserData(uid);
+    const profile  = userData.profile || {};
+    const xp       = userData.xp || { level: 1, lifetimeXP: 0 };
+    const league   = getLeagueName(xp.lifetimeXP || 0);
+    const streak   = getStreakCount(userData);
+    const gems     = userData.gems?.total || 0;
+    const badges   = getEarnedBadges(userData);
+
+    // Banner
+    const BANNERS = {
+      default: "linear-gradient(135deg,#0f0f1a,#1a0f2e,#0f1a1a)",
+      fire:    "linear-gradient(135deg,#1a0800,#3d1200,#7c2d12)",
+      ocean:   "linear-gradient(135deg,#020617,#0c1445,#164e63)",
+      forest:  "linear-gradient(135deg,#052e16,#14532d,#1a3a1a)",
+      sunset:  "linear-gradient(135deg,#1c0a2e,#4a1060,#831843)",
+      gold:    "linear-gradient(135deg,#1c1400,#3d2d00,#78350f)",
+      neon:    "linear-gradient(135deg,#0a0a0a,#0d1117,#161b22)",
+      aurora:  "linear-gradient(135deg,#042f2e,#0f3460,#1a1a2e)",
+    };
+    const bannerKey = profile.banner || "default";
+    document.getElementById("profileBanner").style.background =
+      BANNERS[bannerKey] || BANNERS.default;
+
+    document.getElementById("profileAvatar").textContent =
+      user.avatar || profile.avatar || "😊";
+    document.getElementById("profileName").textContent =
+      profile.displayName || user.name || user.username;
+    document.getElementById("profileHandle").textContent = "@" + user.username;
+
+    const statusEl = document.getElementById("profileStatus");
+    if (profile.statusLabel) {
+      statusEl.textContent = profile.statusLabel;
+      statusEl.style.display = "inline-block";
+    } else {
+      statusEl.style.display = "none";
+    }
+
+    // Stats
+    document.getElementById("profileStats").innerHTML = `
+      <div class="pstat">
+        <div class="pstat-val" style="color:#4ade80">LV ${xp.level}</div>
+        <div class="pstat-lbl">Level</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val" style="color:#fb923c">${streak}🔥</div>
+        <div class="pstat-lbl">Streak</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val" style="color:#a78bfa">${gems}💎</div>
+        <div class="pstat-lbl">Gems</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val" style="color:${league.color}">${league.emoji}</div>
+        <div class="pstat-lbl">${league.name}</div>
+      </div>`;
+
+    // Activity grid — last 30 days
+    buildActivityGrid(userData);
+
+    // Badges
+    const badgesEl = document.getElementById("profileBadges");
+    if (badges.length) {
+      badgesEl.innerHTML = badges.map(b =>
+        `<span class="badge-chip" style="color:${b.color};border-color:${b.color}44;background:${b.color}18">${b.label}</span>`
+      ).join("");
+    } else {
+      badgesEl.innerHTML = `<span style="color:var(--muted);font-size:0.8rem">No badges yet</span>`;
+    }
+
+    document.getElementById("profileOverlay").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeProfile = () => {
+    document.getElementById("profileOverlay").classList.add("hidden");
+    document.body.style.overflow = "";
+  };
+
+  const handleOverlayClick = (e) => {
+    if (e.target === document.getElementById("profileOverlay")) closeProfile();
+  };
+
+  const buildActivityGrid = (userData) => {
+    const grid    = document.getElementById("activityGrid");
+    const today   = new Date();
+    const cells   = [];
+
+    for (let i = 29; i >= 0; i--) {
+      const d   = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y   = d.getFullYear();
+      const m   = d.getMonth();      // 0-indexed
+      const day = d.getDate();       // 1-indexed
+
+      const mk     = `${y}-${String(m + 1).padStart(2, "0")}`;
+      const month  = userData[mk];
+      if (!month?.tasks?.length) { cells.push(0); continue; }
+
+      const active = month.tasks.filter(t => t.days[day - 1] !== "locked");
+      if (!active.length) { cells.push(0); continue; }
+      const done   = active.filter(t => t.days[day - 1] === "done").length;
+      const pct    = done / active.length;
+      cells.push(pct >= 1 ? 4 : pct >= 0.75 ? 3 : pct >= 0.5 ? 2 : pct > 0 ? 1 : 0);
+    }
+
+    grid.innerHTML = cells.map(l =>
+      `<div class="act-cell ${l ? "l" + l : ""}"></div>`
+    ).join("");
+  };
+
+  /* ── Helpers ── */
+  const LEAGUES = [
+    { name:"Bronze",  emoji:"🥉", color:"#cd7f32", xp:0      },
+    { name:"Silver",  emoji:"🥈", color:"#94a3b8", xp:300    },
+    { name:"Gold",    emoji:"🥇", color:"#facc15", xp:800    },
+    { name:"Platinum",emoji:"💠", color:"#7dd3fc", xp:1800   },
+    { name:"Diamond", emoji:"💎", color:"#38bdf8", xp:3500   },
+    { name:"Obsidian",emoji:"🖤", color:"#334155", xp:6000   },
+    { name:"Emerald", emoji:"💚", color:"#4ade80", xp:10000  },
+    { name:"Ruby",    emoji:"❤️", color:"#f43f5e", xp:16000  },
+    { name:"Mythic",  emoji:"🌌", color:"#a78bfa", xp:25000  },
+    { name:"Legendary",emoji:"👑",color:"#ffd700", xp:40000  },
+  ];
+
+  const getLeagueName = (lxp) => {
+    let league = LEAGUES[0];
+    LEAGUES.forEach(l => { if (lxp >= l.xp) league = l; });
+    return league;
+  };
+
+  const getStreakCount = (userData) => {
+    const ms = userData.streakMilestones;
+    if (ms?.includes(365)) return "365+";
+    if (ms?.includes(100)) return "100+";
+    if (ms?.includes(60))  return "60+";
+    if (ms?.includes(30))  return "30+";
+    if (ms?.includes(14))  return "14+";
+    if (ms?.includes(7))   return "7+";
+    return userData.loginStreak?.count || 0;
+  };
+
+  const getEarnedBadges = (userData) => {
+    const badges = [];
+    const lxp    = userData.xp?.lifetimeXP || 0;
+    const league = getLeagueName(lxp);
+
+    if (lxp > 0)                                    badges.push({ label: league.emoji + " " + league.name, color: league.color });
+    if (userData.streakMilestones?.includes(30))     badges.push({ label: "🏆 30-Day Streak", color: "#fb923c" });
+    if (userData.streakMilestones?.includes(7))      badges.push({ label: "⚡ Week Warrior",   color: "#facc15" });
+    if (userData.timeAchievements?.earlyBird)        badges.push({ label: "🌅 Early Bird",      color: "#fbbf24" });
+    if (userData.timeAchievements?.nightOwl)         badges.push({ label: "🦉 Night Owl",       color: "#818cf8" });
+    if (userData.easterEggs?.konami)                 badges.push({ label: "👾 Konami",           color: "#4ade80" });
+    if (userData.easterEggs?.speed_demon)            badges.push({ label: "⚡ Speed Demon",      color: "#facc15" });
+    if (userData.easterEggs?.overachiever)           badges.push({ label: "🤯 Overachiever",     color: "#ef4444" });
+    if (userData.easterEggs?.minimalist)             badges.push({ label: "🧘 Minimalist",       color: "#a78bfa" });
+    if ((userData.xp?.level || 1) >= 10)             badges.push({ label: "✨ Level 10",          color: "#38bdf8" });
+    if ((userData.xp?.level || 1) >= 25)             badges.push({ label: "🌟 Level 25",          color: "#fbbf24" });
+    if ((userData.gems?.total || 0) >= 100)          badges.push({ label: "💯 Centurion",         color: "#facc15" });
+    return badges;
+  };
+
+  const escHtml = (str) =>
+    str?.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") || "";
+
+  /* ── Init ── */
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    handleSearch(e.target.value);
+  });
+
+  ensureCurrentUserRegistered();
+  showAllUsers();
+</script>
+</body>
+</html>
