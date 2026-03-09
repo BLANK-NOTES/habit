@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker · Sign In</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0c0c14;
+    --card:     #131320;
+    --border:   rgba(255,255,255,0.08);
+    --text:     #f0f0f8;
+    --muted:    #6b7280;
+    --primary:  #4CAF50;
+    --error:    #f87171;
+    --success:  #4ade80;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* Animated background orbs */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(76,175,80,0.06) 0%, transparent 70%);
+    top: -100px; left: -100px;
+    animation: orbDrift 12s ease-in-out infinite alternate;
+  }
+  body::after {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(100,80,200,0.05) 0%, transparent 70%);
+    bottom: -100px; right: -100px;
+    animation: orbDrift 14s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes orbDrift {
+    from { transform: translate(0,0); }
+    to   { transform: translate(40px, 30px); }
+  }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 36px 32px;
+    width: min(420px, 100%);
+    animation: cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes cardIn {
+    from { transform: translateY(30px) scale(0.96); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .logo-icon {
+    font-size: 2.8rem;
+    display: block;
+    margin-bottom: 8px;
+    animation: logoBounce 2s ease-in-out infinite;
+  }
+  @keyframes logoBounce {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+  .logo-title {
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  .logo-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* Tab switcher */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  /* Form */
+  .form { display: flex; flex-direction: column; gap: 14px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .field-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .field-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 1rem;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .field input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.92rem;
+    padding: 11px 12px 11px 38px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    font-family: inherit;
+  }
+  .field input:focus {
+    border-color: var(--primary);
+    background: rgba(76,175,80,0.04);
+  }
+  .field input.error { border-color: var(--error); }
+  .field input.success { border-color: var(--success); }
+
+  /* Username availability indicator */
+  .username-status {
+    position: absolute;
+    right: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .username-status.checking { color: var(--muted); animation: spin 1s linear infinite; }
+  .username-status.available { color: var(--success); }
+  .username-status.taken     { color: var(--error); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .field-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .field-hint.error   { color: var(--error); }
+  .field-hint.success { color: var(--success); }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .submit-btn:hover   { opacity: 0.88; }
+  .submit-btn:active  { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Error banner */
+  .error-banner {
+    background: rgba(248,113,113,0.12);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--error);
+    display: none;
+    animation: shake 0.4s ease;
+  }
+  .error-banner.show { display: block; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-6px); }
+    40%     { transform: translateX(6px); }
+    60%     { transform: translateX(-4px); }
+    80%     { transform: translateX(4px); }
+  }
+
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted); font-size: 0.72rem; margin: 4px 0;
+  }
+  .divider::before, .divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .switch-link {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .switch-link span {
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: underline dotted;
+  }
+
+  /* Password strength */
+  .pw-strength {
+    height: 3px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .pw-strength-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s, background 0.3s;
+    width: 0%;
+  }
+</style>
+<style>
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+<script src="habitSecurity.js"></script>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">🔥</span>
+    <div class="logo-title">Habit Tracker</div>
+    <div class="logo-sub">Build habits. Build yourself.</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabLogin"    onclick="showTab('login')">Sign In</button>
+    <button class="tab"        id="tabRegister" onclick="showTab('register')">Create Account</button>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <form class="form" id="loginForm" onsubmit="handleLogin(event)">
+    <div class="error-banner" id="loginError"></div>
+
+    <div class="field">
+      <label>Username or Email</label>
+      <div class="field-wrap">
+        <span class="field-icon">👤</span>
+        <input type="text" id="loginIdentifier" placeholder="username or email" autocomplete="username" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="field-wrap">
+        <span class="field-icon">🔒</span>
+        <input type="password" id="loginPassword" placeholder="your password" autocomplete="current-password" required>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn">Sign In →</button>
+
+    <div class="switch-link">
+      Don't have an account? <span onclick="showTab('register')">Create one</span>
+    </div>
+  </form>
+
+  <!-- REGISTER FORM -->
+  <form class="form" id="registerForm" style="display:none" onsubmit="handleRegister(event)">
+    <div class="error-banner" id="registerError"></div>
+
+    <div class="field">
+      <label>Username</label>
+      <div class="field-wrap">
+        <span class="field-icon">🏷️</span>
+        <input type="text" id="regUsername" placeholder="pick a unique username"
+               autocomplete="off" required
+               oninput="checkUsername(this.value)">
+        <span class="username-status" id="usernameStatus"></span>
+      </div>
+      <div class="field-hint" id="usernameHint">Letters, numbers, underscores only. 3–20 chars.</div>
+    </div>
+
+    <div class="field">
+      <label>Display Name</label>
+      <div class="field-wrap">
+        <span class="field-icon">✏️</span>
+        <input type="text" id="regName" placeholder="your display name" maxlength="32" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Email</label>
+      <div class="field-wrap">
+        <span class="field-icon">📧</span>
+        <input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="field-wrap">
+        <span class="field-icon">🔒</span>
+        <input type="password" id="regPassword" placeholder="at least 6 characters"
+               autocomplete="new-password" required oninput="checkPasswordStrength(this.value)">
+      </div>
+      <div class="pw-strength"><div class="pw-strength-fill" id="pwStrengthBar"></div></div>
+      <div class="field-hint" id="pwStrengthLabel"></div>
+    </div>
+
+    <div class="field">
+      <label>Confirm Password</label>
+      <div class="field-wrap">
+        <span class="field-icon">🔒</span>
+        <input type="password" id="regPasswordConfirm" placeholder="repeat password"
+               autocomplete="new-password" required>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="registerBtn">Create Account →</button>
+
+    <div class="switch-link">
+      Already have an account? <span onclick="showTab('login')">Sign in</span>
+    </div>
+  </form>
+</div>
+
+<script>
+  /* ═══════════════════════════════════════════════
+     USER REGISTRY
+     Stored in localStorage as "habitTracker_users"
+     Structure: { [userId]: { id, username, name, email, passwordHash, createdAt } }
+     Index:     "habitTracker_usernames" → { [username_lower]: userId }
+     Index:     "habitTracker_emails"    → { [email_lower]: userId }
+  ═══════════════════════════════════════════════ */
+
+  const USERS_KEY     = "habitTracker_users";
+  const USERNAME_IDX  = "habitTracker_usernames";
+  const EMAIL_IDX     = "habitTracker_emails";
+
+  const getUsers     = () => JSON.parse(localStorage.getItem(USERS_KEY))     || {};
+  const getUsernames = () => JSON.parse(localStorage.getItem(USERNAME_IDX))  || {};
+  const getEmails    = () => JSON.parse(localStorage.getItem(EMAIL_IDX))     || {};
+
+  const saveUsers     = (v) => localStorage.setItem(USERS_KEY,    JSON.stringify(v));
+  const saveUsernames = (v) => localStorage.setItem(USERNAME_IDX, JSON.stringify(v));
+  const saveEmails    = (v) => localStorage.setItem(EMAIL_IDX,    JSON.stringify(v));
+
+  /* ── Simple hash (not cryptographic — localStorage only) ── */
+  const hashPassword = async (pw) => {
+    const buf  = await crypto.subtle.digest("SHA-256",
+                   new TextEncoder().encode(pw + "habitTracker_salt_v1"));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+  };
+
+  // Security: prevent clickjacking
+  if (window.HabitSecurity) {
+    window.HabitSecurity.preventClickjacking();
+    window.HabitSecurity.injectCSPMeta();
+  }
+
+  /* ── Username validation ── */
+  const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+
+  let _usernameTimer = null;
+  const checkUsername = (val) => {
+    const status = document.getElementById("usernameStatus");
+    const hint   = document.getElementById("usernameHint");
+    const input  = document.getElementById("regUsername");
+
+    clearTimeout(_usernameTimer);
+
+    if (!val) {
+      status.textContent = "";
+      hint.textContent   = "Letters, numbers, underscores only. 3–20 chars.";
+      hint.className     = "field-hint";
+      input.className    = "";
+      return;
+    }
+
+    if (!USERNAME_RE.test(val)) {
+      status.textContent = "✗";
+      status.className   = "username-status taken";
+      hint.textContent   = "Only letters, numbers and _ allowed. 3–20 chars.";
+      hint.className     = "field-hint error";
+      input.className    = "error";
+      return;
+    }
+
+    status.textContent = "…";
+    status.className   = "username-status checking";
+
+    _usernameTimer = setTimeout(() => {
+      const taken = !!getUsernames()[val.toLowerCase()];
+      if (taken) {
+        status.textContent = "✗";
+        status.className   = "username-status taken";
+        hint.textContent   = "Username already taken — try another";
+        hint.className     = "field-hint error";
+        input.className    = "error";
+      } else {
+        status.textContent = "✓";
+        status.className   = "username-status available";
+        hint.textContent   = "Username available!";
+        hint.className     = "field-hint success";
+        input.className    = "success";
+      }
+    }, 350);
+  };
+
+  /* ── Password strength ── */
+  const checkPasswordStrength = (pw) => {
+    const bar   = document.getElementById("pwStrengthBar");
+    const label = document.getElementById("pwStrengthLabel");
+    let score   = 0;
+    if (pw.length >= 6)                          score++;
+    if (pw.length >= 10)                         score++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw))   score++;
+    if (/[0-9]/.test(pw))                        score++;
+    if (/[^a-zA-Z0-9]/.test(pw))                score++;
+
+    const levels = [
+      { pct:"20%", bg:"#ef4444", text:"Too short" },
+      { pct:"40%", bg:"#f97316", text:"Weak" },
+      { pct:"60%", bg:"#facc15", text:"Okay" },
+      { pct:"80%", bg:"#84cc16", text:"Good" },
+      { pct:"100%",bg:"#4ade80", text:"Strong" },
+    ];
+    const lvl         = levels[Math.min(score, 4)];
+    bar.style.width   = lvl.pct;
+    bar.style.background = lvl.bg;
+    label.textContent = lvl.text;
+    label.className   = "field-hint";
+  };
+
+  /* ── Tab switching ── */
+  const showTab = (tab) => {
+    const isLogin = tab === "login";
+    document.getElementById("loginForm").style.display    = isLogin ? "flex" : "none";
+    document.getElementById("registerForm").style.display = isLogin ? "none" : "flex";
+    document.getElementById("tabLogin").className    = "tab" + (isLogin ? " active" : "");
+    document.getElementById("tabRegister").className = "tab" + (!isLogin ? " active" : "");
+    hideErrors();
+  };
+
+  const hideErrors = () => {
+    document.getElementById("loginError").classList.remove("show");
+    document.getElementById("registerError").classList.remove("show");
+  };
+
+  const showError = (id, msg) => {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add("show");
+  };
+
+  /* ═══════════════════
+     REGISTER
+  ═══════════════════ */
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    const _hs = window.HabitSecurity || {};
+    // Rate limit: 3 registration attempts per 5 minutes
+    if (_hs.rateLimit && !_hs.rateLimit("register", 3, 300000)) {
+      showError("registerError", "Too many attempts. Please wait a few minutes.");
+      return;
+    }
+    const btn = document.getElementById("registerBtn");
+    btn.disabled = true;
+    btn.textContent = "Creating…";
+
+    let username = document.getElementById("regUsername").value.trim();
+    let name     = document.getElementById("regName").value.trim();
+    // Sanitize inputs before storing
+    if (_hs.sanitizeName) {
+      username = _hs.sanitizeName(username, 20);
+      name     = _hs.sanitizeName(name, 32);
+    }
+    const email    = document.getElementById("regEmail").value.trim().toLowerCase();
+    const pw       = document.getElementById("regPassword").value;
+    const pwConf   = document.getElementById("regPasswordConfirm").value;
+
+    // Validate
+    if (!USERNAME_RE.test(username)) {
+      showError("registerError", "Invalid username — letters, numbers and _ only, 3–20 chars.");
+      btn.disabled = false; btn.textContent = "Create Account →"; return;
+    }
+    if (pw !== pwConf) {
+      showError("registerError", "Passwords don't match.");
+      btn.disabled = false; btn.textContent = "Create Account →"; return;
+    }
+    if (pw.length < 6) {
+      showError("registerError", "Password must be at least 6 characters.");
+      btn.disabled = false; btn.textContent = "Create Account →"; return;
+    }
+
+    const usernames = getUsernames();
+    const emails    = getEmails();
+
+    if (usernames[username.toLowerCase()]) {
+      showError("registerError", "Username already taken — choose another.");
+      btn.disabled = false; btn.textContent = "Create Account →"; return;
+    }
+    if (emails[email]) {
+      showError("registerError", "An account with this email already exists.");
+      btn.disabled = false; btn.textContent = "Create Account →"; return;
+    }
+
+    // Create user
+    const userId = "u_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
+    const pwHash = await hashPassword(pw);
+
+    const user = {
+      id:        userId,
+      username:  username.toLowerCase(),
+      name,
+      email,
+      pwHash,
+      avatar:    "😊",
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save
+    const users = getUsers();
+    users[userId] = user;
+    saveUsers(users);
+
+    usernames[username.toLowerCase()] = userId;
+    saveUsernames(usernames);
+
+    emails[email] = userId;
+    saveEmails(emails);
+
+    // Log in
+    loginUser(user);
+  };
+
+  /* ═══════════════════
+     LOGIN
+  ═══════════════════ */
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const _hs = window.HabitSecurity || {};
+    // Rate limit: 5 login attempts per 2 minutes
+    if (_hs.rateLimit && !_hs.rateLimit("login", 5, 120000)) {
+      showError("loginError", "Too many login attempts. Please wait 2 minutes.");
+      return;
+    }
+    const identifier = document.getElementById("loginIdentifier").value.trim().toLowerCase();
+    const pw         = document.getElementById("loginPassword").value;
+
+    if (!identifier || !pw) {
+      showError("loginError", "Please fill in all fields.");
+      return;
+    }
+
+    const users     = getUsers();
+    const usernames = getUsernames();
+    const emails    = getEmails();
+
+    // Find by username OR email
+    let userId = usernames[identifier] || emails[identifier];
+
+    // Fallback: search users directly (for accounts created before index)
+    if (!userId) {
+      userId = Object.values(users).find(u =>
+        u.username === identifier || u.email === identifier
+      )?.id;
+    }
+
+    if (!userId || !users[userId]) {
+      showError("loginError", "No account found with that username or email.");
+      return;
+    }
+
+    const user   = users[userId];
+    const pwHash = await hashPassword(pw);
+
+    if (user.pwHash !== pwHash) {
+      showError("loginError", "Incorrect password.");
+      // Shake the card
+      document.querySelector(".card").style.animation = "shake 0.4s ease";
+      setTimeout(() => document.querySelector(".card").style.animation = "", 400);
+      return;
+    }
+
+    loginUser(user);
+  };
+
+  const loginUser = (user) => {
+    // Store session (only safe fields — no pwHash)
+    const session = {
+      id:       user.id,
+      username: user.username,
+      name:     user.name,
+      email:    user.email,
+      avatar:   user.avatar || "😊",
+    };
+    localStorage.setItem("auth_user", JSON.stringify(session));
+    // First-time users go through onboarding quiz
+    const isNew = !localStorage.getItem("habitOnboarded");
+    window.location.href = isNew ? "onboarding.html" : "monthly.html";
+  };
+
+  /* ═══════════════════
+     MIGRATE existing users
+     If someone already has an auth_user but no entry in the users registry,
+     create a minimal entry so they're discoverable.
+  ═══════════════════ */
+  const migrateExistingUser = () => {
+    const existing = JSON.parse(localStorage.getItem("auth_user"));
+    if (!existing?.id) return;
+
+    const users = getUsers();
+    if (users[existing.id]) {
+      // Already registered — go straight to app
+      window.location.href = "monthly.html";
+      return;
+    }
+
+    // Legacy user — needs to set a username and password
+    // Don't auto-redirect, let them go through registration
+    // Pre-fill what we know
+    if (existing.name)  document.getElementById("regName").value  = existing.name;
+    if (existing.email) document.getElementById("regEmail").value = existing.email;
+    showTab("register");
+
+    const banner = document.createElement("div");
+    banner.style.cssText = `
+      background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.3);
+      border-radius:10px;padding:10px 14px;font-size:0.8rem;color:#4ade80;
+      margin-bottom:14px;`;
+    banner.textContent = "👋 Welcome back! Please create a username and password to continue.";
+    document.getElementById("registerForm").prepend(banner);
+  };
+
+  // Check if already logged in
+  const checkSession = () => {
+    const session = JSON.parse(localStorage.getItem("auth_user"));
+    if (!session?.id) return;
+    const users = getUsers();
+    // If user is in registry — go straight to app
+    if (users[session.id]) {
+      window.location.href = "monthly.html"; // existing users skip onboarding
+    } else {
+      migrateExistingUser();
+    }
+  };
+
+  checkSession();
+</script>
+
+<script>
+/* Page transition */
+document.body.style.animation = "pageIn 0.28s cubic-bezier(0.34,1.05,0.64,1) both";
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a) return;
+  const href = a.getAttribute("href");
+  if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("javascript")) return;
+  if (a.target === "_blank") return;
+  e.preventDefault();
+  document.body.style.transition = "opacity 0.18s ease";
+  document.body.style.opacity = "0";
+  setTimeout(() => { window.location.href = href; }, 180);
+});
+</script>
+</body>
+</html>

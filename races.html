@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XP Races</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090f;--panel:#111118;--card:#161622;--border:rgba(255,255,255,0.07);--text:#eeeef5;--muted:#6b7280;--primary:#4CAF50;}
+[data-theme="light"]{--bg:#f5f6fa;--panel:#fff;--card:#f0f1f8;--border:rgba(0,0,0,0.08);--text:#111827;--muted:#6b7280;--primary:#16a34a;}
+[data-theme="pink"]{--bg:#1a0814;--panel:#220d1a;--card:#2c1020;--text:#fce7f3;--muted:#c084a8;--primary:#f472b6;--border:rgba(244,114,182,0.12);}
+[data-theme="blue"]{--bg:#060d1a;--panel:#0c1628;--card:#101e34;--text:#dbeafe;--muted:#6b96cc;--primary:#60a5fa;--border:rgba(96,165,250,0.1);}
+[data-theme="midnight"]{--bg:#030308;--panel:#080812;--card:#0d0d1c;--text:#ede9fe;--muted:#7c6ba0;--primary:#a78bfa;--border:rgba(167,139,250,0.1);}
+[data-theme="ocean"]{--bg:#020c14;--panel:#051422;--card:#081c30;--text:#cffafe;--muted:#4d8fa0;--primary:#06b6d4;--border:rgba(6,182,212,0.1);}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;padding-bottom:32px;}
+.header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:10;}
+.back{background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:6px 12px;font-size:0.78rem;font-weight:700;text-decoration:none;}
+.htitle{font-size:0.95rem;font-weight:900;flex:1;}
+.race-hero{background:linear-gradient(160deg,rgba(76,175,80,0.12),transparent);padding:20px 16px;text-align:center;border-bottom:1px solid var(--border);}
+.race-title{font-size:1.1rem;font-weight:900;margin-bottom:4px;}
+.race-sub{font-size:0.78rem;color:var(--muted);}
+.timer{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 14px;font-size:0.8rem;font-weight:800;margin-top:10px;}
+.timer-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);animation:tdot 1s ease-in-out infinite;}
+@keyframes tdot{0%,100%{opacity:1}50%{opacity:0.2}}
+.leaderboard{padding:12px 14px;display:flex;flex-direction:column;gap:6px;max-width:560px;margin:0 auto;}
+.row{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:all 0.2s;position:relative;overflow:hidden;}
+.row.me{border-color:color-mix(in srgb,var(--primary) 50%,transparent);background:color-mix(in srgb,var(--primary) 6%,var(--panel));}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;opacity:0;}
+.row.me::before{opacity:1;background:var(--primary);}
+.rank{font-size:1.1rem;font-weight:900;width:28px;text-align:center;flex-shrink:0;}
+.rank.gold{color:#facc15;}
+.rank.silver{color:#9ca3af;}
+.rank.bronze{color:#92400e;}
+.row-av{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.row-info{flex:1;min-width:0;}
+.row-name{font-size:0.88rem;font-weight:800;}
+.row-sub{font-size:0.68rem;color:var(--muted);margin-top:2px;}
+.row-xp{font-size:0.95rem;font-weight:900;color:var(--primary);flex-shrink:0;}
+.xp-bar-wrap{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:5px;}
+.xp-bar{height:100%;border-radius:2px;background:var(--primary);transition:width 1s ease;}
+.prizes{padding:0 14px 14px;max-width:560px;margin:0 auto;}
+.prize-row{display:flex;gap:8px;margin-top:10px;}
+.prize{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;flex:1;text-align:center;}
+.prize-icon{font-size:1.4rem;margin-bottom:4px;}
+.prize-lbl{font-size:0.7rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+.prize-val{font-size:0.82rem;font-weight:900;margin-top:2px;}
+</style>
+<script src="habitSecurity.js"></script>
+</head>
+<body>
+<header class="header">
+  <a href="monthly.html" class="back">&#8592; Home</a>
+  <div class="htitle">Weekly XP Race</div>
+</header>
+
+<div class="race-hero">
+  <div class="race-title">&#127937; Week Race &mdash; <span id="weekLabel"></span></div>
+  <div class="race-sub">Top 3 earn bonus XP. Race resets every Monday.</div>
+  <div class="timer"><div class="timer-dot"></div><span id="timerEl">Calculating...</span></div>
+</div>
+
+<div class="prizes">
+  <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-top:8px;">Prizes this week</div>
+  <div class="prize-row">
+    <div class="prize"><div class="prize-icon">&#x1F947;</div><div class="prize-lbl">1st Place</div><div class="prize-val">+200 XP &#x1F48E;30</div></div>
+    <div class="prize"><div class="prize-icon">&#x1F948;</div><div class="prize-lbl">2nd Place</div><div class="prize-val">+100 XP &#x1F48E;15</div></div>
+    <div class="prize"><div class="prize-icon">&#x1F949;</div><div class="prize-lbl">3rd Place</div><div class="prize-val">+50 XP &#x1F48E;5</div></div>
+  </div>
+</div>
+
+<div class="leaderboard" id="lb"></div>
+
+<script>
+  const _hs = window.HabitSecurity || {};
+
+const au=JSON.parse(localStorage.getItem("auth_user")||"null");
+if(!au) location.href="auth.html";
+document.body.setAttribute("data-theme",localStorage.getItem("habitTheme")||"dark");
+
+const raw=JSON.parse(localStorage.getItem("habitTracker_"+au.id)||"{}");
+const xp=raw.xp||{level:1,lifetimeXP:0};
+
+// Calculate this week's XP (Mon-Sun)
+const getWeekXP=()=>{
+  const today=new Date();
+  const dayOfWeek=today.getDay();
+  const monday=new Date(today);
+  monday.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1));
+  monday.setHours(0,0,0,0);
+  // Estimate from daily activity: XP awarded this month so far
+  const mk=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0");
+  const mo=raw[mk]||{tasks:[]};
+  let weekXP=0;
+  const todayIdx=today.getDate()-1;
+  const mondayIdx=monday.getDate()-1;
+  mo.tasks.forEach(t=>{
+    for(let i=Math.max(0,mondayIdx);i<=todayIdx;i++){
+      if(t.days[i]==="done") weekXP+=20;
+    }
+  });
+  return weekXP;
+};
+
+const weekXP=getWeekXP();
+
+// Generate matched competitors near user's level
+const genCompetitors=()=>{
+  const level=xp.level;
+  const names=["Alex Chen","Sam Rivers","Jordan K.","Riley Moon","Morgan B.","Taylor S.","Casey W.","Drew L."];
+  const avatars=["&#x1F642;","&#x1F60A;","&#x1F604;","&#x1F600;","&#x1F603;","&#x1F60E;","&#x1F914;","&#x1F920;"];
+  const seed=Math.floor(Date.now()/604800000); // changes weekly
+  const rng=s=>{s=Math.sin(s)*10000;return s-Math.floor(s);};
+  const comps=names.slice(0,7).map((name,i)=>{
+    const baseXP=weekXP*(0.6+rng(seed*i+1)*0.8);
+    return{name,avatar:avatars[i],xp:Math.round(baseXP),level:level+~~(rng(seed*i+2)*3)-1,me:false};
+  });
+  comps.push({name:au.displayName||au.username,avatar:au.profile?.avatar||"&#x1F642;",xp:weekXP,level,me:true});
+  return comps.sort((a,b)=>b.xp-a.xp);
+};
+
+const competitors=genCompetitors();
+const maxXP=competitors[0]?.xp||1;
+
+// Week label
+const today=new Date();
+const wk=`Week ${Math.ceil((today.getDate()-today.getDay()+new Date(today.getFullYear(),0,1).getDay())/7)} of ${today.getFullYear()}`;
+document.getElementById("weekLabel").textContent=wk;
+
+// Timer
+const nextMonday=()=>{
+  const d=new Date();
+  const day=d.getDay();
+  const diff=day===0?1:8-day;
+  d.setDate(d.getDate()+diff);
+  d.setHours(0,0,0,0);
+  return d;
+};
+const updateTimer=()=>{
+  const diff=nextMonday()-Date.now();
+  const h=Math.floor(diff/3600000);
+  const m=Math.floor((diff%3600000)/60000);
+  document.getElementById("timerEl").textContent=`${h}h ${m}m until reset`;
+};
+updateTimer();setInterval(updateTimer,60000);
+
+// Render
+const lb=document.getElementById("lb");
+const rankEmoji=i=>i===0?"&#x1F947;":i===1?"&#x1F948;":i===2?"&#x1F949;":(i+1)+"";
+const rankClass=i=>i===0?"gold":i===1?"silver":i===2?"bronze":"";
+let myRank = -1;
+competitors.forEach((c,i)=>{
+  const pct=Math.round((c.xp/maxXP)*100);
+  const d=document.createElement("div");
+  d.className="row"+(c.me?" me":"");
+  d.innerHTML=`<div class="rank ${rankClass(i)}">${rankEmoji(i)}</div><div class="row-av">${c.avatar}</div><div class="row-info"><div class="row-name">${(_hs.escapeHTML||String)(c.name||"")}${c.me?' <span style="font-size:0.65rem;color:var(--primary);font-weight:800;">(you)</span>':""}</div><div class="xp-bar-wrap"><div class="xp-bar" style="width:0%" data-w="${pct}"></div></div></div><div class="row-xp">${c.xp} XP</div>`;
+  lb.appendChild(d);
+  if (c.me) myRank = i;
+});
+// Animate bars
+setTimeout(()=>{document.querySelectorAll(".xp-bar").forEach(b=>{b.style.width=b.dataset.w+"%";});},100);
+
+// ── Trophy system ─────────────────────────────────────────────────────
+const WEEK_KEY = "habitRaceTrophy_" + Math.floor(Date.now()/604800000);
+const alreadyAwarded = localStorage.getItem(WEEK_KEY);
+if (myRank >= 0 && myRank <= 2 && !alreadyAwarded) {
+  localStorage.setItem(WEEK_KEY, myRank);
+  const trophyData = [
+    { emoji:"🥇", label:"1st Place", color:"#f59e0b", title:"Gold Trophy", xp:200, gems:30 },
+    { emoji:"🥈", label:"2nd Place", color:"#9ca3af", title:"Silver Trophy", xp:100, gems:15 },
+    { emoji:"🥉", label:"3rd Place", color:"#b45309", title:"Bronze Trophy", xp:50,  gems:5  },
+  ][myRank];
+
+  // Save trophy to habit data for badges page
+  const raw2 = JSON.parse(localStorage.getItem("habitTracker_"+au.id)||"{}");
+  if (!raw2.trophies) raw2.trophies = [];
+  const weekLabel2 = document.getElementById("weekLabel").textContent;
+  const existing = raw2.trophies.find(t => t.weekKey === WEEK_KEY);
+  if (!existing) {
+    raw2.trophies.push({ weekKey:WEEK_KEY, rank:myRank, label:trophyData.label, emoji:trophyData.emoji, color:trophyData.color, title:trophyData.title, week:weekLabel2, date:new Date().toISOString() });
+    localStorage.setItem("habitTracker_"+au.id, JSON.stringify(raw2));
+  }
+
+  // Show trophy popup after brief delay
+  setTimeout(() => showTrophyPopup(trophyData, weekLabel2), 1200);
+}
+
+function isRaceWeekOver() {
+  // Trophy is shareable only after the race week ends (next Monday 00:00)
+  // We check if the current week number has advanced past when trophy was won
+  const wonWeek = Math.floor(Date.now()/604800000); // same formula as WEEK_KEY
+  // Race resets Monday - if today IS Monday or later in a new week, it's over
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+  // The race runs Mon→Sun. If we're past Sunday of the trophy week, it's over.
+  // Since WEEK_KEY uses epoch weeks (Mon-aligned), the race is over when
+  // Math.floor(Date.now()/604800000) > wonWeek (i.e. next week already)
+  // We store wonWeek on trophy, so compare:
+  return false; // evaluated at popup time — see callers
+}
+
+function showTrophyPopup(t, weekLabel) {
+  // Race hasn't ended yet — trophy is awarded now but sharing waits until Monday
+  const raceEnds = nextMonday();
+  const msLeft = raceEnds - Date.now();
+  const hoursLeft = Math.floor(msLeft / 3600000);
+  const daysLeft = Math.floor(hoursLeft / 24);
+  const timeStr = daysLeft > 0 ? `${daysLeft}d ${hoursLeft % 24}h` : `${hoursLeft}h`;
+  const raceOver = msLeft <= 0;
+
+  const overlay = document.createElement("div");
+  overlay.id = "trophyPopup";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeInOverlay 0.3s ease;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  overlay.innerHTML = `
+    <div id="trophyCard" style="background:linear-gradient(145deg,#0a1a10,#0d1520);border:1px solid ${t.color}44;border-radius:24px;padding:32px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.7),0 0 0 1px ${t.color}22">
+      <div style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:${t.color};margin-bottom:14px">🏁 Week Race Result</div>
+      <div style="font-size:5rem;line-height:1;margin-bottom:10px;filter:drop-shadow(0 0 24px ${t.color}88)">${t.emoji}</div>
+      <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${t.color};margin-bottom:6px">${t.label}</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#fff;margin-bottom:4px">${t.title}</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:20px">${weekLabel}</div>
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:24px">
+        <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:10px 18px;text-align:center">
+          <div style="font-size:1.1rem;font-weight:900;color:#4ade80">+${t.xp}</div>
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.4)">XP</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);border-radius:12px;padding:10px 18px;text-align:center">
+          <div style="font-size:1.1rem;font-weight:900;color:#c084fc">+${t.gems} 💎</div>
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.4)">Gems</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${raceOver
+          ? `<button onclick="shareTrophyImage('${t.emoji}','${t.title}','${t.label}','${t.color}','${weekLabel}')" style="background:linear-gradient(135deg,${t.color},${t.color}cc);color:#000;border:none;border-radius:13px;padding:13px;font-size:0.9rem;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px ${t.color}44">
+              📸 Share Trophy
+            </button>`
+          : `<div style="background:rgba(255,255,255,0.04);border:1.5px dashed rgba(255,255,255,0.12);border-radius:13px;padding:12px;font-size:0.78rem;color:rgba(255,255,255,0.35);line-height:1.5">
+              🔒 Share unlocks when race ends<br>
+              <span style="font-size:0.7rem;color:rgba(255,255,255,0.2)">${timeStr} remaining</span>
+            </div>`
+        }
+        <button onclick="document.getElementById('trophyPopup').remove()" style="background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border-radius:13px;padding:11px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit">
+          Collect &amp; Close ✓
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if(e.target===overlay) overlay.remove(); });
+}
+
+function shareTrophyImage(emoji, title, label, color, weekLabel) {
+  const canvas = document.createElement("canvas");
+  const DPR = Math.min(window.devicePixelRatio||2, 3);
+  const W=480, H=480;
+  canvas.width = W*DPR; canvas.height = H*DPR;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(DPR, DPR);
+
+  // Background
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,"#080f10"); bg.addColorStop(1,"#0d1a14");
+  ctx.fillStyle = bg;
+  if(ctx.roundRect) ctx.roundRect(0,0,W,H,0); else ctx.rect(0,0,W,H);
+  ctx.fill();
+
+  // Glow
+  const glow = ctx.createRadialGradient(W/2,H/2-30,20,W/2,H/2-30,160);
+  glow.addColorStop(0, color+"33"); glow.addColorStop(1,"transparent");
+  ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
+
+  // Border
+  ctx.strokeStyle = color+"44"; ctx.lineWidth = 2;
+  ctx.strokeRect(2,2,W-4,H-4);
+
+  // Trophy emoji
+  ctx.font = "bold 110px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(emoji, W/2, H/2 - 70);
+
+  // Label
+  ctx.font = "800 14px -apple-system,sans-serif"; ctx.fillStyle = color;
+  ctx.fillText(label.toUpperCase(), W/2, H/2 + 30);
+
+  // Title
+  ctx.font = "900 28px -apple-system,sans-serif"; ctx.fillStyle = "#ffffff";
+  ctx.fillText(title, W/2, H/2 + 68);
+
+  // Week
+  ctx.font = "500 13px -apple-system,sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.fillText(weekLabel, W/2, H/2 + 104);
+
+  // Watermark
+  ctx.font = "700 11px -apple-system,sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.fillText("HabitTracker · habittracker.app", W/2, H-28);
+
+  canvas.toBlob(blob => {
+    if(!blob) return;
+    const url = URL.createObjectURL(blob);
+    const file = new File([blob], "trophy.png", {type:"image/png"});
+    if (navigator.share && navigator.canShare?.({files:[file]})) {
+      navigator.share({files:[file], text: `I finished ${label} in the Week Race! ${emoji}`})
+        .catch(() => downloadTrophy(url));
+    } else {
+      downloadTrophy(url);
+    }
+  }, "image/png");
+}
+
+function downloadTrophy(url) {
+  document.getElementById("trophyDownloadUI")?.remove();
+  const el = document.createElement("div");
+  el.id = "trophyDownloadUI";
+  el.style.cssText = "position:fixed;inset:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);padding:20px;font-family:inherit";
+  el.innerHTML = `<div style="background:#0d1a10;border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:20px;max-width:360px;width:100%;text-align:center">
+    <div style="font-size:0.8rem;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px">Share Trophy</div>
+    <img id="trophyShareImg" style="width:100%;border-radius:14px;margin-bottom:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5)" />
+    <a id="trophyDlLink" download="trophy.png" style="display:block;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:12px;border-radius:12px;font-weight:800;font-size:0.9rem;text-decoration:none;margin-bottom:8px">⬇️ Save Image</a>
+    <button onclick="document.getElementById('trophyDownloadUI').remove()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-family:inherit;font-size:0.8rem;padding:6px">Close</button>
+  </div>`;
+  document.body.appendChild(el);
+  document.getElementById("trophyShareImg").src = url;
+  document.getElementById("trophyDlLink").href = url;
+  document.getElementById("trophyDlLink").onclick = () => setTimeout(()=>el.remove(),600);
+  el.addEventListener("click", e => { if(e.target===el) { el.remove(); URL.revokeObjectURL(url); }});
+}
+</script>
+<script>
+// Smart back: if opened from settings, back goes to settings
+(function() {
+  if (sessionStorage.getItem('settingsReturn') === '1') {
+    sessionStorage.removeItem('settingsReturn');
+    var backs = document.querySelectorAll('a[href="monthly.html"].back, a[href="monthly.html"].back-btn, .back-btn, .back');
+    backs.forEach(function(b) {
+      if (b.getAttribute('href') === 'monthly.html') {
+        b.href = 'settings.html';
+        b.textContent = '← Settings';
+      }
+    });
+  }
+})();
+</script>
+<script>
+/* Smooth page transition */
+(function() {
+  document.body.style.opacity = "0";
+  requestAnimationFrame(() => {
+    document.body.style.transition = "opacity 0.22s ease";
+    document.body.style.opacity = "1";
+  });
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a[href]");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("javascript")) return;
+    if (a.target === "_blank") return;
+    e.preventDefault();
+    document.body.style.transition = "opacity 0.16s ease";
+    document.body.style.opacity = "0";
+    setTimeout(() => { window.location.href = href; }, 160);
+  });
+})();
+</script>
+</body>
+</html>

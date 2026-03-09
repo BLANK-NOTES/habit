@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+(function(){
+  var t = localStorage.getItem('habitTheme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.setAttribute('data-theme', t);
+  });
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friends · Habit Tracker</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --bg:#0c0c14;--panel:#121220;--card:#1a1a2e;--border:rgba(255,255,255,0.08);
+    --text:#f0f0f8;--muted:#6b7280;--primary:#4CAF50;--primary-dim:rgba(76,175,80,0.12);
+    --danger:#f87171;--warn:#facc15;--info:#60a5fa;
+  }
+  [data-theme="light"]  {--bg:#f4f4f8;--panel:#fff;--card:#f0f0f6;--border:rgba(0,0,0,0.1);--text:#111;--muted:#666;}
+  [data-theme="pink"]   {--bg:#1a0a14;--panel:#200d18;--card:#2a1020;--border:rgba(255,100,150,0.15);--primary:#f472b6;--primary-dim:rgba(244,114,182,0.12);}
+  [data-theme="blue"]   {--bg:#0a1020;--panel:#0d1628;--card:#101e34;--border:rgba(100,160,255,0.12);--primary:#60a5fa;--primary-dim:rgba(96,165,250,0.12);}
+  [data-theme="yellow"] {--bg:#14120a;--panel:#1c1908;--card:#26230e;--border:rgba(250,200,20,0.12);--primary:#fbbf24;--primary-dim:rgba(251,191,36,0.12);}
+  [data-theme="army"]   {--bg:#0e100a;--panel:#141810;--card:#1c2214;--border:rgba(120,160,80,0.12);--primary:#84cc16;--primary-dim:rgba(132,204,22,0.12);}
+  [data-theme="ferrari"]{--bg:#120808;--panel:#1a0c0c;--card:#221010;--border:rgba(255,60,60,0.12);--primary:#ef4444;--primary-dim:rgba(239,68,68,0.12);}
+  [data-theme="midnight"]{--bg:#030308;--panel:#080812;--card:#0d0d1c;--border:rgba(167,139,250,0.1);--text:#ede9fe;--muted:#7c6ba0;--primary:#a78bfa;}
+  [data-theme="ocean"]  {--bg:#020c14;--panel:#051422;--card:#081c30;--border:rgba(6,182,212,0.1);--text:#cffafe;--muted:#4d8fa0;--primary:#06b6d4;}
+
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;gap:12px;padding:16px 18px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100;}
+  .back-btn{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:6px 12px;font-size:0.8rem;font-weight:600;text-decoration:none;transition:all 0.2s;}
+  .back-btn:hover{color:var(--text);border-color:var(--primary);}
+  .page-title{font-size:1.1rem;font-weight:900;flex:1;}
+  .find-btn{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:0.8rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 18px;gap:0;}
+  .tab-btn{padding:12px 16px;font-size:0.82rem;font-weight:700;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;position:relative;}
+  .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+  .tab-badge{position:absolute;top:8px;right:4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.55rem;font-weight:800;display:flex;align-items:center;justify-content:center;}
+
+  /* BODY */
+  .page-body{max-width:640px;margin:0 auto;padding:18px 14px;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* SECTION */
+  .section{margin-bottom:20px;}
+  .section-title{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:44px 20px;color:var(--muted);}
+  .empty-icon{font-size:2.8rem;margin-bottom:10px;}
+  .empty-title{font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:5px;}
+  .empty-sub{font-size:0.78rem;}
+
+  /* FRIEND CARD */
+  .friend-card{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:all 0.18s;animation:cardIn 0.3s ease;}
+  @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .friend-card:hover{border-color:var(--primary);background:var(--primary-dim);}
+  .f-avatar{width:44px;height:44px;border-radius:50%;background:var(--card);border:2px solid var(--primary);font-size:1.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .f-info{flex:1;min-width:0;}
+  .f-name{font-size:0.9rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .f-handle{font-size:0.72rem;color:var(--muted);margin-top:1px;}
+  .f-stats{display:flex;gap:10px;margin-top:4px;}
+  .f-stat{font-size:0.68rem;color:var(--muted);}
+  .f-stat span{color:var(--text);font-weight:700;}
+  .f-actions{display:flex;gap:6px;flex-shrink:0;flex-direction:column;align-items:flex-end;}
+
+  /* PROGRESS COMPARISON CARD */
+  .vs-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;animation:cardIn 0.3s ease;}
+  .vs-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .vs-you{flex:1;text-align:center;}
+  .vs-them{flex:1;text-align:center;}
+  .vs-divider{font-size:1.2rem;font-weight:900;color:var(--muted);flex-shrink:0;}
+  .vs-avatar{font-size:1.8rem;margin-bottom:3px;}
+  .vs-name{font-size:0.72rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vs-bar-wrap{margin-bottom:8px;}
+  .vs-bar-label{display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);margin-bottom:3px;}
+  .vs-bar-track{height:7px;background:var(--card);border-radius:4px;overflow:hidden;display:flex;}
+  .vs-bar-you{height:100%;background:var(--primary);border-radius:4px 0 0 4px;transition:width 0.6s ease;}
+  .vs-bar-them{height:100%;background:#f87171;border-radius:0 4px 4px 0;transition:width 0.6s ease;}
+  .vs-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .vs-metric{background:var(--card);border-radius:8px;padding:8px;text-align:center;}
+  .vs-metric-val{font-size:1rem;font-weight:900;}
+  .vs-metric-lbl{font-size:0.58rem;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+  .vs-winner{font-size:0.65rem;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:4px;}
+  .vs-winner.you{background:rgba(74,222,128,0.2);color:#4ade80;}
+  .vs-winner.them{background:rgba(248,113,113,0.2);color:#f87171;}
+
+  /* REQUEST CARD */
+  .req-card{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px;animation:cardIn 0.3s ease;}
+  .req-actions{display:flex;gap:6px;flex-shrink:0;}
+  .btn-accept{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:opacity 0.2s;}
+  .btn-accept:hover{opacity:0.85;}
+  .btn-decline{background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;}
+
+  /* CHALLENGE CARD */
+  .challenge-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;animation:cardIn 0.3s ease;}
+  .ch-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .ch-icon{font-size:1.6rem;flex-shrink:0;}
+  .ch-title{font-size:0.9rem;font-weight:800;flex:1;}
+  .ch-badge{font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid;}
+  .ch-badge.active  {color:#4ade80;border-color:#4ade8040;background:rgba(74,222,128,0.12);}
+  .ch-badge.pending {color:#facc15;border-color:#facc1540;background:rgba(250,204,21,0.12);}
+  .ch-badge.won     {color:#a78bfa;border-color:#a78bfa40;background:rgba(167,139,250,0.12);}
+  .ch-badge.lost    {color:#f87171;border-color:#f8717140;background:rgba(248,113,113,0.12);}
+  .ch-progress{margin-bottom:8px;}
+  .ch-bar{height:6px;background:var(--card);border-radius:3px;overflow:hidden;margin-top:4px;}
+  .ch-bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease;}
+  .ch-footer{display:flex;justify-content:space-between;align-items:center;font-size:0.7rem;color:var(--muted);}
+  .ch-actions{display:flex;gap:6px;margin-top:10px;}
+  .ch-btn{padding:5px 12px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;border:none;transition:opacity 0.2s;}
+  .ch-btn:hover{opacity:0.85;}
+  .ch-btn-accept{background:var(--primary);color:#fff;}
+  .ch-btn-decline{background:var(--card);color:var(--muted);border:1px solid var(--border);}
+  .ch-btn-cancel{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);}
+
+  /* CHALLENGE MODAL */
+  #challengeModal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;}
+  #challengeModal.hidden{display:none;}
+  .challenge-modal-box{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(400px,94vw);}
+  .ch-modal-title{font-size:1rem;font-weight:900;margin-bottom:18px;}
+  .ch-field{margin-bottom:14px;}
+  .ch-field label{display:block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:5px;}
+  .ch-field select,.ch-field input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.88rem;padding:8px 10px;outline:none;font-family:inherit;}
+  .ch-field select:focus,.ch-field input:focus{border-color:var(--primary);}
+  .ch-modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .ch-modal-actions button{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;border:none;}
+  .ch-modal-send{background:var(--primary);color:#fff;}
+  .ch-modal-cancel{background:var(--card);color:var(--muted);}
+
+  /* PROFILE SHEET */
+  #profileOverlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;}
+  #profileOverlay.hidden{display:none;}
+  .profile-sheet{background:var(--panel);border:1px solid var(--border);border-radius:22px 22px 0 0;width:min(600px,100%);max-height:88vh;overflow-y:auto;animation:sheetUp 0.35s cubic-bezier(0.34,1.2,0.64,1);padding-bottom:32px;}
+  @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .profile-banner{height:90px;border-radius:22px 22px 0 0;position:relative;}
+  .profile-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.4);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .profile-avatar-wrap{margin:-26px 0 0 18px;display:inline-block;}
+  .profile-avatar-big{width:56px;height:56px;border-radius:50%;background:var(--card);border:3px solid var(--panel);font-size:2rem;display:flex;align-items:center;justify-content:center;}
+  .profile-names{padding:8px 18px 14px;}
+  .profile-display-name{font-size:1.15rem;font-weight:900;}
+  .profile-username{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+  .profile-actions{display:flex;gap:8px;padding:0 18px;margin-bottom:14px;flex-wrap:wrap;}
+  .pa-btn{padding:7px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;border:none;transition:all 0.2s;}
+  .pa-btn-challenge{background:var(--primary);color:#fff;}
+  .pa-btn-remove{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);}
+  .profile-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:0 18px;border-radius:12px;overflow:hidden;}
+  .pstat{background:var(--card);padding:11px 6px;text-align:center;}
+  .pstat-val{font-size:1.1rem;font-weight:900;}
+  .pstat-lbl{font-size:0.56rem;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+  .activity-grid{display:flex;flex-wrap:wrap;gap:3px;padding:0 18px;}
+  .act-cell{width:13px;height:13px;border-radius:3px;background:var(--card);}
+  .act-cell.l1{background:color-mix(in srgb,var(--primary) 25%,transparent);}
+  .act-cell.l2{background:color-mix(in srgb,var(--primary) 50%,transparent);}
+  .act-cell.l3{background:color-mix(in srgb,var(--primary) 75%,transparent);}
+  .act-cell.l4{background:var(--primary);}
+  .profile-section-title{font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding:14px 18px 6px;}
+  .badges-grid{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px;}
+  .badge-chip{font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:10px;border:1px solid;}
+
+  /* TOAST */
+  #socialToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--primary);border-radius:12px;padding:9px 18px;font-size:0.82rem;font-weight:700;color:var(--primary);z-index:99999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+  #socialToast.show{opacity:1;}
+
+  /* INACTIVE FRIEND ALERTS */
+  #inactiveAlerts { margin-bottom: 12px; }
+  .inactive-alert {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(251,146,60,0.08);
+    border: 1px solid rgba(251,146,60,0.25);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .ia-avatar { font-size: 1.5rem; flex-shrink: 0; }
+  .ia-body { flex: 1; }
+  .ia-name { font-size: 0.82rem; font-weight: 700; }
+  .ia-sub  { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .ia-nudge-btn {
+    background: rgba(251,146,60,0.15); border: 1px solid rgba(251,146,60,0.4);
+    color: #fb923c; border-radius: 9px; padding: 7px 14px;
+    font-size: 0.78rem; font-weight: 800; cursor: pointer;
+    font-family: inherit; transition: all 0.2s; flex-shrink: 0;
+  }
+  .ia-nudge-btn:hover { background: rgba(251,146,60,0.25); transform: scale(1.04); }
+</style>
+<style>
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+<script src="habitsecurity.js"></script>
+<script src="habitpremium.js"></script>
+  <!-- Prevent Cloudflare email-decode injection errors when running locally -->
+  <meta name="cf-2fa-verify" content="no-email-protection">
+  <script>
+    (function() {
+      var _orig = document.createElement.bind(document);
+      document.createElement = function(tag) {
+        var el = _orig(tag);
+        if (tag.toLowerCase() === 'script') {
+          Object.defineProperty(el, 'src', {
+            set: function(v) {
+              if (v && v.indexOf('cdn-cgi') !== -1) return;
+              Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').set.call(el, v);
+            },
+            get: function() {
+              return Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').get.call(el);
+            }
+          });
+        }
+        return el;
+      };
+    })();
+  </script>
+</head>
+<body>
+
+<header class="header">
+  <a href="monthly.html" class="back-btn">← Home</a>
+  <div class="page-title">👥 Friends</div>
+  <a href="users.html" class="find-btn">🔍 Find Users</a>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('friends')" id="tabFriends">Friends</button>
+  <button class="tab-btn" onclick="showTab('requests')" id="tabRequests">Requests <span class="tab-badge" id="reqBadge" style="display:none">0</span></button>
+  <button class="tab-btn" onclick="showTab('vs')" id="tabVs">Compare</button>
+  <button class="tab-btn" onclick="showTab('challenges')" id="tabChallenges">Challenges <span class="tab-badge" id="chBadge" style="display:none">0</span></button>
+</div>
+
+<div class="page-body">
+
+  <!-- FRIENDS TAB -->
+  <div class="tab-panel active" id="panelFriends">
+    <!-- Find Friends search -->
+    <div class="section">
+      <div class="section-title">Find Friends</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="text" id="friendSearch" placeholder="Search by username…" maxlength="30"
+          style="flex:1;padding:10px 14px;background:var(--card);border:1.5px solid var(--border);
+                 border-radius:12px;color:var(--text);font-family:inherit;font-size:0.88rem;outline:none;
+                 caret-color:var(--primary);transition:border-color 0.15s"
+          oninput="searchFriends(this.value)"
+          onfocus="this.style.borderColor='var(--primary)'"
+          onblur="this.style.borderColor='var(--border)'">
+        <button onclick="searchFriends(document.getElementById('friendSearch').value)"
+          style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:12px;
+                 font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit;flex-shrink:0">Search</button>
+      </div>
+      <div id="friendSearchResults"></div>
+    </div>
+
+    <!-- Your Friends list -->
+    <div class="section">
+      <div class="section-title">Your Friends</div>
+      <div id="friendsList"></div>
+    </div>
+
+    <!-- Share Achievements -->
+    <div class="section" id="shareAchSection" style="display:none">
+      <div class="section-title">Share Achievement</div>
+      <div id="shareAchContent"></div>
+    </div>
+  </div>
+
+  <!-- REQUESTS TAB -->
+  <div class="tab-panel" id="panelRequests">
+    <div class="section">
+      <div class="section-title">Incoming Requests</div>
+      <div id="incomingList"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Sent Requests</div>
+      <div id="sentList"></div>
+    </div>
+  </div>
+
+  <!-- COMPARE TAB -->
+  <div class="tab-panel" id="panelVs">
+    <div class="section">
+      <div class="section-title">Head-to-Head with Friends</div>
+      <div id="vsList"></div>
+    </div>
+  </div>
+
+  <!-- CHALLENGES TAB -->
+  <div class="tab-panel" id="panelChallenges">
+    <div class="section">
+      <div class="section-title">Active & Incoming Challenges</div>
+      <div id="challengesList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CHALLENGE MODAL -->
+<div id="challengeModal" class="hidden">
+  <div class="challenge-modal-box">
+    <div class="ch-modal-title">⚔️ Send a Challenge</div>
+    <input type="hidden" id="challengeTargetId">
+    <div id="challengeTargetName" style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;"></div>
+
+    <div class="ch-field">
+      <label>Challenge Type</label>
+      <select id="challengeType">
+        <option value="streak_race">🔥 Streak Race — first to X days wins</option>
+        <option value="perfect_days">⭐ Perfect Days — most perfect days in period</option>
+        <option value="completion_pct">📊 Completion % — highest average over period</option>
+        <option value="xp_race">⚡ XP Race — earn the most XP this week</option>
+        <option value="habit_count">✅ Habit Count — most habits done in a day</option>
+      </select>
+    </div>
+
+    <div class="ch-field">
+      <label>Goal / Duration</label>
+      <select id="challengeGoal">
+        <option value="7">7 days</option>
+        <option value="14">14 days</option>
+        <option value="30">30 days</option>
+        <option value="streak_5">First to 5-day streak</option>
+        <option value="streak_10">First to 10-day streak</option>
+        <option value="streak_30">First to 30-day streak</option>
+      </select>
+    </div>
+
+    <div class="ch-field">
+      <label>Trash Talk (optional 😈)</label>
+      <input type="text" id="challengeMessage" placeholder="Think you can beat me? 😤" maxlength="80">
+    </div>
+
+    <div class="ch-modal-actions">
+      <button class="ch-modal-cancel" onclick="closeChallengeModal()">Cancel</button>
+      <button class="ch-modal-send" onclick="sendChallenge()">Send Challenge ⚔️</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE OVERLAY -->
+<div id="profileOverlay" class="hidden" onclick="handleOverlayClick(event)">
+  <div class="profile-sheet" id="profileSheet">
+    <div class="profile-banner" id="profileBanner">
+      <button class="profile-close" onclick="closeProfile()">✕</button>
+    </div>
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar-big" id="profileAvatar">😊</div>
+    </div>
+    <div class="profile-names">
+      <div class="profile-display-name" id="profileName">—</div>
+      <div class="profile-username"     id="profileHandle">@—</div>
+    </div>
+    <div class="profile-actions" id="profileActions"></div>
+    <div class="profile-stats" id="profileStats"></div>
+    <div class="profile-section-title">Activity — Last 30 Days</div>
+    <div class="activity-grid" id="activityGrid"></div>
+    <div class="profile-section-title">Badges</div>
+    <div class="badges-grid" id="profileBadges"></div>
+  </div>
+</div>
+
+<div id="socialToast"></div>
+
+<script>
+  const authUser = JSON.parse(localStorage.getItem("auth_user"));
+  if (!authUser) window.location.href = "auth.html";
+
+  // ── PREMIUM GATE: Friends & Challenges ──────────────────────────
+  if (window.HabitPremium && !window.HabitPremium.isPremium()) {
+    // Show locked overlay instead of full page
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.style.overflow = "hidden";
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)";
+      const _backHref = sessionStorage.getItem('settingsReturn') === '1' ? 'settings.html' : 'monthly.html';
+      const _backLabel = sessionStorage.getItem('settingsReturn') === '1' ? '← Back to Settings' : '← Back to dashboard';
+      overlay.innerHTML = `
+        <div style="text-align:center;max-width:380px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+          <div style="font-size:3.5rem;margin-bottom:16px">👥</div>
+          <div style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-size:0.6rem;font-weight:900;letter-spacing:0.12em;border-radius:20px;padding:3px 10px;margin-bottom:14px">⭐ PREMIUM</div>
+          <div style="font-size:1.4rem;font-weight:900;color:var(--text);margin-bottom:10px">Friends &amp; Challenges</div>
+          <div style="font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:28px">
+            Add friends, send accountability nudges, and challenge each other to habit competitions. All on Premium.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button onclick="window.location.href='upgrade.html'" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;padding:14px;font-size:0.95rem;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 6px 24px rgba(16,185,129,0.35)">
+              Unlock Premium →
+            </button>
+            <button onclick="window.location.href='${_backHref}'" style="background:var(--panel);border:1.5px solid var(--border);color:var(--muted);border-radius:14px;padding:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit">
+              ${_backLabel}
+            </button>
+          </div>
+          <div style="font-size:0.62rem;color:var(--muted);opacity:0.5;margin-top:16px">From £3.99/mo · Cancel any time</div>
+        </div>`;
+      document.body.appendChild(overlay);
+    });
+  }
+
+  document.body.setAttribute("data-theme", localStorage.getItem("habitTheme") || "dark");
+
+  /* ── Storage ── */
+  const getUsers    = () => JSON.parse(localStorage.getItem("habitTracker_users"))    || {};
+  const getUserData = (uid) => JSON.parse(localStorage.getItem(`habitTracker_${uid}`)) || {};
+
+  const getSocial   = (uid = authUser.id) => JSON.parse(localStorage.getItem(`habitSocial_${uid}`)) || { friends:[], sentRequests:[], receivedRequests:[], challenges:[] };
+  const saveSocial  = (v, uid = authUser.id) => localStorage.setItem(`habitSocial_${uid}`, JSON.stringify(v));
+
+  /* ── Tab switching ── */
+  const showTab = (name) => {
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("panel" + name.charAt(0).toUpperCase() + name.slice(1)).classList.add("active");
+    document.getElementById("tab"   + name.charAt(0).toUpperCase() + name.slice(1)).classList.add("active");
+  };
+
+  /* ── Toast ── */
+  let _tt = null;
+  const toast = (msg) => {
+    const el = document.getElementById("socialToast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove("show"), 2500);
+  };
+
+  /* ── League helpers ── */
+  const LEAGUES = [
+    {name:"Bronze",emoji:"🥉",color:"#cd7f32",xp:0},{name:"Silver",emoji:"🥈",color:"#94a3b8",xp:300},
+    {name:"Gold",emoji:"🥇",color:"#facc15",xp:800},{name:"Platinum",emoji:"💠",color:"#7dd3fc",xp:1800},
+    {name:"Diamond",emoji:"💎",color:"#38bdf8",xp:3500},{name:"Obsidian",emoji:"🖤",color:"#334155",xp:6000},
+    {name:"Emerald",emoji:"💚",color:"#4ade80",xp:10000},{name:"Ruby",emoji:"❤️",color:"#f43f5e",xp:16000},
+    {name:"Mythic",emoji:"🌌",color:"#a78bfa",xp:25000},{name:"Legendary",emoji:"👑",color:"#ffd700",xp:40000},
+  ];
+  const getLeague = (lxp) => { let l = LEAGUES[0]; LEAGUES.forEach(lg => { if (lxp >= lg.xp) l = lg; }); return l; };
+
+  const getBadges = (ud) => {
+    const badges = [];
+    const lxp = ud.xp?.lifetimeXP || 0;
+    const lg  = getLeague(lxp);
+    if (lxp > 0)                             badges.push({label: lg.emoji+" "+lg.name,    color: lg.color});
+    if (ud.streakMilestones?.includes(30))    badges.push({label:"🏆 30-Day Streak",        color:"#fb923c"});
+    if (ud.streakMilestones?.includes(7))     badges.push({label:"⚡ Week Warrior",          color:"#facc15"});
+    if (ud.timeAchievements?.earlyBird)       badges.push({label:"🌅 Early Bird",            color:"#fbbf24"});
+    if (ud.timeAchievements?.nightOwl)        badges.push({label:"🦉 Night Owl",             color:"#818cf8"});
+    if (ud.easterEggs?.konami)                badges.push({label:"👾 Konami",                color:"#4ade80"});
+    if (ud.easterEggs?.speed_demon)           badges.push({label:"⚡ Speed Demon",           color:"#facc15"});
+    if (ud.easterEggs?.overachiever)          badges.push({label:"🤯 Overachiever",          color:"#ef4444"});
+    if (ud.easterEggs?.minimalist)            badges.push({label:"🧘 Minimalist",            color:"#a78bfa"});
+    if ((ud.xp?.level||1) >= 10)              badges.push({label:"✨ Level 10",              color:"#38bdf8"});
+    if ((ud.xp?.level||1) >= 25)              badges.push({label:"🌟 Level 25",              color:"#fbbf24"});
+    if ((ud.gems?.total||0) >= 100)           badges.push({label:"💯 Centurion",             color:"#facc15"});
+    return badges;
+  };
+
+  const getStreak = (ud) => {
+    const ms = ud.streakMilestones;
+    if (ms?.includes(365)) return "365+";
+    if (ms?.includes(100)) return "100+";
+    if (ms?.includes(60))  return "60+";
+    if (ms?.includes(30))  return "30+";
+    return ud.loginStreak?.count || 0;
+  };
+
+  const BANNERS = {
+    default:"linear-gradient(135deg,#0f0f1a,#1a0f2e,#0f1a1a)",
+    fire:   "linear-gradient(135deg,#1a0800,#3d1200,#7c2d12)",
+    ocean:  "linear-gradient(135deg,#020617,#0c1445,#164e63)",
+    forest: "linear-gradient(135deg,#052e16,#14532d,#1a3a1a)",
+    sunset: "linear-gradient(135deg,#1c0a2e,#4a1060,#831843)",
+    gold:   "linear-gradient(135deg,#1c1400,#3d2d00,#78350f)",
+    neon:   "linear-gradient(135deg,#0a0a0a,#0d1117,#161b22)",
+    aurora: "linear-gradient(135deg,#042f2e,#0f3460,#1a1a2e)",
+  };
+
+  /* ── Compute monthly stats ── */
+  const getMonthStats = (ud) => {
+    const today = new Date();
+    const mk    = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
+    const month = ud[mk];
+    if (!month?.tasks?.length) return { done:0, total:0, pct:0, perfectDays:0, streak: getStreak(ud) };
+    const day   = today.getDate();
+    let done=0, total=0, perfectDays=0;
+    for (let d=0; d<day; d++) {
+      const active = month.tasks.filter(t => t.days[d] !== "locked");
+      if (!active.length) continue;
+      const dayDone = active.filter(t => t.days[d] === "done").length;
+      done += dayDone; total += active.length;
+      if (dayDone === active.length) perfectDays++;
+    }
+    return { done, total, pct: total>0 ? Math.round(done/total*100) : 0, perfectDays, streak: getStreak(ud) };
+  };
+
+  /* ═══════════════════════
+     FRIENDS TAB
+  ═══════════════════════ */
+
+  /* ── Friend Inactivity Nudge System ── */
+  const checkFriendActivity = () => {
+    const friends = getFriends();
+    const users   = getUsers();
+    const todayStr = new Date().toISOString().slice(0,10);
+    const results = [];
+
+    friends.forEach(fid => {
+      const user = users[fid];
+      if (!user) return;
+      const fdata = JSON.parse(localStorage.getItem(`habitTracker_${fid}`) || "{}");
+      const moDate = Object.keys(fdata).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().pop();
+      if (!moDate) { results.push({ user, fid, daysMissed: 3, streak: 0 }); return; }
+
+      const month = fdata[moDate];
+      if (!month?.tasks?.length) { results.push({ user, fid, daysMissed: 3, streak: 0 }); return; }
+
+      // Check last few days
+      const today = new Date();
+      let daysMissed = 0;
+      for (let d = 1; d <= 3; d++) {
+        const check = new Date(today);
+        check.setDate(today.getDate() - d);
+        if (check.getMonth() !== today.getMonth()) break;
+        const idx = check.getDate() - 1;
+        const active = month.tasks.filter(t => t.days[idx] !== "locked");
+        const done   = active.filter(t => t.days[idx] === "done").length;
+        if (active.length && done / active.length < 0.5) daysMissed++;
+      }
+
+      // Estimate streak from data
+      let streak = 0;
+      for (let d = today.getDate() - 2; d >= 0; d--) {
+        const active = month.tasks.filter(t => t.days[d] !== "locked");
+        if (!active.length) continue;
+        const done = active.filter(t => t.days[d] === "done").length;
+        if (done / active.length >= 0.5) streak++;
+        else break;
+      }
+
+      if (daysMissed >= 1) results.push({ user, fid, daysMissed, streak });
+    });
+
+    return results;
+  };
+
+  const sendNudge = (friendId, friendName) => {
+    // Write a nudge notification to their storage
+    const fdata = JSON.parse(localStorage.getItem(`habitTracker_${friendId}`) || "{}");
+    if (!fdata.nudges) fdata.nudges = [];
+    const myName = authUser.name || authUser.username || "Your friend";
+    fdata.nudges.push({
+      from: myName,
+      msg: `${myName} says: Hey! Your streak needs you today 🔥 Don't let it slip now!`,
+      ts: Date.now(),
+      read: false,
+    });
+    // Cap to 10
+    if (fdata.nudges.length > 10) fdata.nudges = fdata.nudges.slice(-10);
+    localStorage.setItem(`habitTracker_${friendId}`, JSON.stringify(fdata));
+    toast(`Nudge sent to ${friendName}! 👊`);
+  };
+
+  const renderInactiveAlert = () => {
+    const inactive = checkFriendActivity();
+    const el = document.getElementById("inactiveAlerts");
+    if (!el) return;
+    if (!inactive.length) { el.innerHTML = ""; return; }
+
+    el.innerHTML = inactive.map(({ user, fid, daysMissed, streak }) => {
+      const name = (window.HabitSecurity?.escapeHTML || String)(user.profile?.displayName || user.username || "Friend");
+      const dayWord = daysMissed === 1 ? "today" : `${daysMissed} days`;
+      const streakWarn = streak > 2 ? `Their <strong>${streak}-day streak</strong> is at risk! ` : "";
+      return `<div class="inactive-alert">
+        <div class="ia-avatar">${user.avatar || "👤"}</div>
+        <div class="ia-body">
+          <div class="ia-name">${name} hasn't been active ${dayWord}</div>
+          <div class="ia-sub">${streakWarn}Give them a push! 🔥</div>
+        </div>
+        <button class="ia-nudge-btn" onclick="sendNudge('${fid}','${name}')">👊 Nudge</button>
+      </div>`;
+    }).join("");
+  };
+
+  const renderFriends = () => {
+    const social  = getSocial();
+    const users   = getUsers();
+    const el      = document.getElementById("friendsList");
+
+    if (!social.friends.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-icon">🤝</div><div class="empty-title">No friends yet</div><div class="empty-sub">Search by username to find and add friends</div></div>`;
+      return;
+    }
+
+    el.innerHTML = "";
+    social.friends.forEach(uid => {
+      const user  = users[uid];
+      if (!user) return;
+      const ud    = getUserData(uid);
+      const stats = getMonthStats(ud);
+      const lg    = getLeague(ud.xp?.lifetimeXP || 0);
+
+      const card = document.createElement("div");
+      card.className = "friend-card";
+      card.innerHTML = `
+        <div class="f-avatar">${user.avatar || "😊"}</div>
+        <div class="f-info">
+          <div class="f-name">${escHtml(user.name || user.username)}</div>
+          <div class="f-handle">@${escHtml(user.username)} · ${lg.emoji} ${lg.name}</div>
+          <div class="f-stats">
+            <div class="f-stat">Streak <span>${stats.streak}🔥</span></div>
+            <div class="f-stat">This month <span>${stats.pct}%</span></div>
+            <div class="f-stat">Level <span>${ud.xp?.level||1}</span></div>
+          </div>
+        </div>
+        <div class="f-actions">
+          <button class="ch-btn ch-btn-accept" style="font-size:0.7rem;padding:4px 10px" data-uid="${uid}">⚔️ Challenge</button>
+        </div>`;
+
+      card.querySelector("[data-uid]").addEventListener("click", e => { e.stopPropagation(); openChallengeModal(uid); });
+      card.addEventListener("click", e => { if (!e.target.closest("button")) openProfile(uid); });
+      el.appendChild(card);
+    });
+  };
+
+  /* ═══════════════════════
+     REQUESTS TAB
+  ═══════════════════════ */
+  const renderRequests = () => {
+    const social  = getSocial();
+    const users   = getUsers();
+
+    // Incoming
+    const inEl = document.getElementById("incomingList");
+    inEl.innerHTML = "";
+    if (!social.receivedRequests.length) {
+      inEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:10px 0">No incoming requests</div>`;
+    } else {
+      social.receivedRequests.forEach(uid => {
+        const user = users[uid]; if (!user) return;
+        const card = document.createElement("div");
+        card.className = "req-card";
+        card.innerHTML = `
+          <div class="f-avatar" style="width:40px;height:40px;font-size:1.4rem">${user.avatar||"😊"}</div>
+          <div class="f-info" style="flex:1">
+            <div class="f-name">${escHtml(user.name||user.username)}</div>
+            <div class="f-handle">@${escHtml(user.username)} wants to be friends</div>
+          </div>
+          <div class="req-actions">
+            <button class="btn-accept" data-uid="${uid}">Accept</button>
+            <button class="btn-decline" data-uid="${uid}">✕</button>
+          </div>`;
+        card.querySelector(".btn-accept").addEventListener("click", () => acceptRequest(uid));
+        card.querySelector(".btn-decline").addEventListener("click", () => declineRequest(uid));
+        inEl.appendChild(card);
+      });
+    }
+
+    // Sent
+    const sentEl = document.getElementById("sentList");
+    sentEl.innerHTML = "";
+    if (!social.sentRequests.length) {
+      sentEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:10px 0">No sent requests</div>`;
+    } else {
+      social.sentRequests.forEach(uid => {
+        const user = users[uid]; if (!user) return;
+        const card = document.createElement("div");
+        card.className = "req-card";
+        card.innerHTML = `
+          <div class="f-avatar" style="width:40px;height:40px;font-size:1.4rem">${user.avatar||"😊"}</div>
+          <div class="f-info" style="flex:1">
+            <div class="f-name">${escHtml(user.name||user.username)}</div>
+            <div class="f-handle">@${escHtml(user.username)} · pending their response</div>
+          </div>
+          <button class="btn-decline" data-uid="${uid}" style="flex-shrink:0">Cancel</button>`;
+        card.querySelector(".btn-decline").addEventListener("click", () => cancelRequest(uid));
+        sentEl.appendChild(card);
+      });
+    }
+
+    // Update badge
+    const cnt = social.receivedRequests.length;
+    const badge = document.getElementById("reqBadge");
+    badge.textContent = cnt; badge.style.display = cnt ? "flex" : "none";
+  };
+
+  const acceptRequest = (uid) => {
+    const social = getSocial();
+    social.receivedRequests = social.receivedRequests.filter(id => id !== uid);
+    if (!social.friends.includes(uid)) social.friends.push(uid);
+    saveSocial(social);
+    const them = getSocial(uid);
+    them.sentRequests = them.sentRequests.filter(id => id !== authUser.id);
+    if (!them.friends.includes(authUser.id)) them.friends.push(authUser.id);
+    saveSocial(them, uid);
+    toast("✓ Friend added!");
+  
+  renderAll();
+
+  /* ── Find friends search ── */
+  const searchFriends = (query) => {
+    const q = (query || '').trim().toLowerCase();
+    const el = document.getElementById('friendSearchResults');
+    if (!q) { el.innerHTML = ''; return; }
+
+    const users = getUsers();
+    const social = getSocial();
+    const allFriendIds = [...social.friends, ...social.sentRequests, authUser.id];
+
+    const results = Object.values(users).filter(u =>
+      u.id !== authUser.id &&
+      (u.username?.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q))
+    ).slice(0, 8);
+
+    if (!results.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">No users found for "<strong>${escHtml(query)}</strong>"</div>`;
+      return;
+    }
+
+    el.innerHTML = '';
+    results.forEach(u => {
+      const isFriend = social.friends.includes(u.id);
+      const isPending = social.sentRequests.includes(u.id);
+      const card = document.createElement('div');
+      card.className = 'req-card';
+      card.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:8px';
+      card.innerHTML = `
+        <div class="f-avatar" style="width:38px;height:38px;border-radius:50%;background:var(--card);
+             border:2px solid var(--border);display:flex;align-items:center;justify-content:center;
+             font-size:1.2rem;flex-shrink:0">${escHtml(u.profile?.avatar || '👤')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:0.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(u.displayName || u.username)}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">@${escHtml(u.username || '')}</div>
+        </div>
+        ${isFriend
+          ? `<span style="font-size:0.72rem;color:var(--primary);font-weight:800">✓ Friends</span>`
+          : isPending
+          ? `<span style="font-size:0.72rem;color:var(--muted);font-weight:700">Pending…</span>`
+          : `<button onclick="sendFriendRequest('${u.id}')" 
+               style="padding:7px 14px;background:var(--primary);color:#fff;border:none;border-radius:10px;
+                      font-weight:800;font-size:0.78rem;cursor:pointer;font-family:inherit;flex-shrink:0">
+               Add +</button>`
+        }`;
+      el.appendChild(card);
+    });
+  };
+  window.searchFriends = searchFriends;
+
+  /* ── Send friend request ── */
+  const sendFriendRequest = (targetId) => {
+    const mySocial = getSocial();
+    if (mySocial.friends.includes(targetId) || mySocial.sentRequests.includes(targetId)) return;
+
+    // Add to my sent requests
+    mySocial.sentRequests.push(targetId);
+    saveSocial(mySocial);
+
+    // Add to their received requests
+    const theirSocial = getSocial(targetId);
+    if (!theirSocial.receivedRequests.includes(authUser.id)) {
+      theirSocial.receivedRequests.push(authUser.id);
+      saveSocial(theirSocial, targetId);
+    }
+
+    toast('Friend request sent! ✓');
+    // Re-run search to update button state
+    searchFriends(document.getElementById('friendSearch')?.value || '');
+    renderRequests();
+  };
+  window.sendFriendRequest = sendFriendRequest;
+
+  /* ── Share achievement to friends ── */
+  const shareAchievementToFeed = (badgeName, badgeIcon, badgeDesc) => {
+    const social = getSocial();
+    if (!social.friends.length) {
+      toast('Add friends first to share achievements!');
+      return;
+    }
+    // Write to each friend's feed
+    const users = getUsers();
+    let shared = 0;
+    social.friends.forEach(fid => {
+      const fSocial = getSocial(fid);
+      if (!fSocial.feed) fSocial.feed = [];
+      fSocial.feed.unshift({
+        type: 'achievement',
+        fromId: authUser.id,
+        fromName: authUser.displayName || authUser.username,
+        fromAvatar: authUser.profile?.avatar || '👤',
+        badge: badgeIcon,
+        badgeName,
+        badgeDesc,
+        ts: Date.now()
+      });
+      fSocial.feed = fSocial.feed.slice(0, 50);
+      saveSocial(fSocial, fid);
+      shared++;
+    });
+    toast(`Achievement shared with ${shared} friend${shared !== 1 ? 's' : ''}! 🏅`);
+  };
+  window.shareAchievementToFeed = shareAchievementToFeed;
+
+  };
+
+  const declineRequest = (uid) => {
+    const social = getSocial();
+    social.receivedRequests = social.receivedRequests.filter(id => id !== uid);
+    saveSocial(social);
+    renderAll();
+  };
+
+  const cancelRequest = (uid) => {
+    const social = getSocial();
+    social.sentRequests = social.sentRequests.filter(id => id !== uid);
+    saveSocial(social);
+    const them = getSocial(uid);
+    them.receivedRequests = them.receivedRequests.filter(id => id !== authUser.id);
+    saveSocial(them, uid);
+    renderAll();
+  };
+
+  const removeFriend = (uid) => {
+    const social = getSocial();
+    social.friends = social.friends.filter(id => id !== uid);
+    saveSocial(social);
+    const them = getSocial(uid);
+    them.friends = them.friends.filter(id => id !== authUser.id);
+    saveSocial(them, uid);
+    closeProfile();
+    toast("Friend removed");
+    renderAll();
+  };
+
+  /* ═══════════════════════
+     COMPARE TAB
+  ═══════════════════════ */
+  const renderVs = () => {
+    const social  = getSocial();
+    const users   = getUsers();
+    const myData  = getUserData(authUser.id);
+    const myStats = getMonthStats(myData);
+    const el      = document.getElementById("vsList");
+
+    if (!social.friends.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-icon">⚔️</div><div class="empty-title">No friends to compare</div><div class="empty-sub">Add friends to see head-to-head stats</div></div>`;
+      return;
+    }
+
+    el.innerHTML = "";
+    social.friends.forEach(uid => {
+      const user    = users[uid]; if (!user) return;
+      const ud      = getUserData(uid);
+      const thStats = getMonthStats(ud);
+      const myXP    = myData.xp?.lifetimeXP || 0;
+      const thXP    = ud.xp?.lifetimeXP     || 0;
+
+      const totalPct = myStats.pct + thStats.pct || 1;
+      const myBar    = Math.round(myStats.pct / totalPct * 100);
+      const thBar    = 100 - myBar;
+
+      const winner = (a, b) => a > b ? "you" : a < b ? "them" : null;
+
+      const card = document.createElement("div");
+      card.className = "vs-card";
+      card.innerHTML = `
+        <div class="vs-header">
+          <div class="vs-you">
+            <div class="vs-avatar">${myData.profile?.avatar || authUser.avatar || "😊"}</div>
+            <div class="vs-name">${escHtml(authUser.name || "You")}</div>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="vs-them">
+            <div class="vs-avatar">${user.avatar || "😊"}</div>
+            <div class="vs-name">@${escHtml(user.username)}</div>
+          </div>
+        </div>
+
+        <div class="vs-bar-wrap">
+          <div class="vs-bar-label"><span>This month %</span><span>${myStats.pct}% vs ${thStats.pct}%</span></div>
+          <div class="vs-bar-track">
+            <div class="vs-bar-you"  style="width:${myBar}%"></div>
+            <div class="vs-bar-them" style="width:${thBar}%"></div>
+          </div>
+        </div>
+
+        <div class="vs-metrics">
+          <div class="vs-metric">
+            <div class="vs-metric-val">
+              ${myStats.streak}
+              ${winner(+myStats.streak, +thStats.streak) === "you" ? '<span class="vs-winner you">YOU</span>' : winner(+myStats.streak, +thStats.streak) === "them" ? '<span class="vs-winner them">THEM</span>' : ""}
+            </div>
+            <div class="vs-metric-lbl">vs ${thStats.streak} 🔥</div>
+          </div>
+          <div class="vs-metric">
+            <div class="vs-metric-val">
+              ${myStats.perfectDays}
+              ${winner(myStats.perfectDays, thStats.perfectDays) === "you" ? '<span class="vs-winner you">YOU</span>' : winner(myStats.perfectDays, thStats.perfectDays) === "them" ? '<span class="vs-winner them">THEM</span>' : ""}
+            </div>
+            <div class="vs-metric-lbl">vs ${thStats.perfectDays} ⭐</div>
+          </div>
+          <div class="vs-metric">
+            <div class="vs-metric-val">
+              ${myData.xp?.level||1}
+              ${winner(myData.xp?.level||1, ud.xp?.level||1) === "you" ? '<span class="vs-winner you">YOU</span>' : winner(myData.xp?.level||1, ud.xp?.level||1) === "them" ? '<span class="vs-winner them">THEM</span>' : ""}
+            </div>
+            <div class="vs-metric-lbl">vs LV ${ud.xp?.level||1}</div>
+          </div>
+        </div>`;
+
+      el.appendChild(card);
+    });
+  };
+
+  /* ═══════════════════════
+     CHALLENGES TAB
+  ═══════════════════════ */
+  const CHALLENGE_TYPES = {
+    streak_race:     { icon:"🔥", label:"Streak Race" },
+    perfect_days:    { icon:"⭐", label:"Perfect Days" },
+    completion_pct:  { icon:"📊", label:"Completion %" },
+    xp_race:         { icon:"⚡", label:"XP Race" },
+    habit_count:     { icon:"✅", label:"Habit Count" },
+  };
+
+  const getChallenges = () => {
+    const social = getSocial();
+    return social.challenges || [];
+  };
+
+  const saveChallenges = (chs) => {
+    const social = getSocial(); social.challenges = chs; saveSocial(social);
+  };
+
+  const getChallengeProgress = (ch) => {
+    const myData = getUserData(authUser.id);
+    const thData = getUserData(ch.targetId || ch.fromId);
+    const today  = new Date();
+    const start  = new Date(ch.startDate || ch.createdAt);
+
+    const daysElapsed = Math.min(
+      Math.floor((today - start) / 86400000),
+      parseInt(ch.goal) || 7
+    );
+
+    let myVal = 0, thVal = 0, goal = 100;
+
+    if (ch.type === "streak_race") {
+      myVal = myData.streakMilestones ? Math.max(...(myData.streakMilestones.length ? myData.streakMilestones : [0])) : 0;
+      thVal = thData.streakMilestones ? Math.max(...(thData.streakMilestones.length ? thData.streakMilestones : [0])) : 0;
+      goal  = parseInt(ch.goal?.replace("streak_","")) || 10;
+    } else if (ch.type === "xp_race") {
+      const wk = ch.weekKey;
+      myVal = myData.league?.weekKey === wk ? (myData.league?.weeklyXP || 0) : myData.xp?.lifetimeXP || 0;
+      thVal = thData.league?.weekKey === wk ? (thData.league?.weeklyXP || 0) : thData.xp?.lifetimeXP || 0;
+      goal  = 500;
+    } else {
+      // Days-based: compute completion over challenge period
+      const mk    = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
+      const computePct = (ud) => {
+        const month = ud[mk]; if (!month?.tasks?.length) return 0;
+        let done=0, total=0;
+        for (let d=0; d<today.getDate(); d++) {
+          const active = month.tasks.filter(t => t.days[d] !== "locked");
+          if (!active.length) continue;
+          done  += active.filter(t => t.days[d] === "done").length;
+          total += active.length;
+        }
+        return total > 0 ? Math.round(done/total*100) : 0;
+      };
+      myVal = computePct(myData); thVal = computePct(thData); goal = 100;
+    }
+
+    return { myVal, thVal, goal, daysElapsed, daysTotal: parseInt(ch.goal) || 7 };
+  };
+
+  const renderChallenges = () => {
+    const chs   = getChallenges();
+    const users = getUsers();
+    const el    = document.getElementById("challengesList");
+    let pendingCount = 0;
+
+    if (!chs.length) {
+      el.innerHTML = `
+  <div class="empty">
+    <div class="empty-icon">⚔️</div>
+    <div class="empty-title">No challenges yet</div>
+    <div class="empty-sub">
+      How to challenge a friend:<br>
+      1️⃣ Go to the <strong>Friends</strong> tab<br>
+      2️⃣ Find your friend and tap <strong>⚔️ Challenge</strong><br>
+      3️⃣ Pick a challenge type and goal<br>
+      4️⃣ They accept — then both of you can see progress here!<br><br>
+      <em style="font-size:0.72rem;color:var(--muted)">Note: both players need to be on the same device network (shared localStorage) for progress to sync.</em>
+    </div>
+  </div>`;
+      document.getElementById("chBadge").style.display = "none";
+      return;
+    }
+
+    el.innerHTML = "";
+    chs.forEach((ch, idx) => {
+      const opponentId = ch.fromId === authUser.id ? ch.targetId : ch.fromId;
+      const opponent   = users[opponentId];
+      if (!opponent) return;
+
+      const type    = CHALLENGE_TYPES[ch.type] || { icon:"⚔️", label:"Challenge" };
+      const prog    = getChallengeProgress(ch);
+      const isFrom  = ch.fromId === authUser.id;
+      const myPct   = Math.min(100, Math.round(prog.myVal / prog.goal * 100));
+      const thPct   = Math.min(100, Math.round(prog.thVal / prog.goal * 100));
+      const card    = document.createElement("div");
+
+      if (ch.status === "pending" && !isFrom) pendingCount++;
+
+      card.className = "challenge-card";
+      card.innerHTML = `
+        <div class="ch-header">
+          <div class="ch-icon">${type.icon}</div>
+          <div class="ch-title">${type.label} vs @${escHtml(opponent.username)}</div>
+          <div class="ch-badge ${ch.status}">${ch.status}</div>
+        </div>
+        ${ch.message ? `<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:8px">"${escHtml(ch.message)}"</div>` : ""}
+        ${ch.status === "active" ? `
+        <div class="ch-progress">
+          <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--muted);margin-bottom:3px">
+            <span>You: ${prog.myVal}</span><span>Them: ${prog.thVal}</span>
+          </div>
+          <div class="ch-bar">
+            <div class="ch-bar-fill" style="width:${myPct}%;background:var(--primary)"></div>
+          </div>
+          <div style="margin-top:4px">
+          <div class="ch-bar">
+            <div class="ch-bar-fill" style="width:${thPct}%;background:#f87171"></div>
+          </div>
+          </div>
+        </div>` : ""}
+        <div class="ch-footer">
+          <span>${ch.goalLabel || ch.goal}</span>
+          <span>${ch.status === "active" ? `Day ${prog.daysElapsed}/${prog.daysTotal}` : ch.status === "won" ? "🏆 You won!" : ch.status === "lost" ? "You lost" : "Waiting for response"}</span>
+        </div>
+        ${ch.status === "pending" && !isFrom ? `
+        <div class="ch-actions">
+          <button class="ch-btn ch-btn-accept" data-idx="${idx}">Accept ⚔️</button>
+          <button class="ch-btn ch-btn-decline" data-idx="${idx}">Decline</button>
+        </div>` : ""}
+        ${isFrom && ch.status === "pending" ? `
+        <div class="ch-actions">
+          <button class="ch-btn ch-btn-cancel" data-idx="${idx}">Cancel</button>
+        </div>` : ""}`;
+
+      card.querySelector("[data-idx].ch-btn-accept")?.addEventListener("click", () => respondChallenge(idx, "active"));
+      card.querySelector("[data-idx].ch-btn-decline")?.addEventListener("click", () => respondChallenge(idx, "declined"));
+      card.querySelector("[data-idx].ch-btn-cancel")?.addEventListener("click", () => respondChallenge(idx, "cancelled"));
+      el.appendChild(card);
+    });
+
+    const badge = document.getElementById("chBadge");
+    badge.textContent = pendingCount; badge.style.display = pendingCount ? "flex" : "none";
+  };
+
+  const respondChallenge = (idx, newStatus) => {
+    const chs = getChallenges();
+    if (!chs[idx]) return;
+    chs[idx].status = newStatus;
+    if (newStatus === "active") chs[idx].startDate = new Date().toISOString();
+    saveChallenges(chs);
+
+    // Mirror on opponent's side
+    const ch         = chs[idx];
+    const opponentId = ch.fromId === authUser.id ? ch.targetId : ch.fromId;
+    const thSocial   = getSocial(opponentId);
+    const thChs      = thSocial.challenges || [];
+    const mirror     = thChs.find(c => c.id === ch.id);
+    if (mirror) { mirror.status = newStatus; if (newStatus === "active") mirror.startDate = ch.startDate; }
+    thSocial.challenges = thChs; saveSocial(thSocial, opponentId);
+
+    toast(newStatus === "active" ? "Challenge accepted! ⚔️" : "Challenge declined");
+    renderChallenges();
+  };
+
+  /* ── Challenge Modal ── */
+  let _challengeTargetId = null;
+
+  const openChallengeModal = (uid) => {
+    const users = getUsers();
+    const user  = users[uid];
+    _challengeTargetId = uid;
+    document.getElementById("challengeTargetName").textContent = `Challenging: ${user?.name || user?.username || uid}`;
+    document.getElementById("challengeModal").classList.remove("hidden");
+  };
+
+  const closeChallengeModal = () => {
+    document.getElementById("challengeModal").classList.add("hidden");
+    _challengeTargetId = null;
+  };
+
+  const sendChallenge = () => {
+    if (!_challengeTargetId) return;
+    const type    = document.getElementById("challengeType").value;
+    const goal    = document.getElementById("challengeGoal").value;
+    const message = document.getElementById("challengeMessage").value.trim();
+
+    const goalLabels = {
+      "7":"7 days","14":"14 days","30":"30 days",
+      "streak_5":"First to 5-day streak","streak_10":"First to 10-day streak","streak_30":"First to 30-day streak"
+    };
+
+    const challenge = {
+      id:         `ch_${Date.now()}`,
+      type, goal,
+      goalLabel:  goalLabels[goal] || goal,
+      message,
+      fromId:     authUser.id,
+      targetId:   _challengeTargetId,
+      status:     "pending",
+      createdAt:  new Date().toISOString(),
+      weekKey:    getWeekKey(),
+    };
+
+    // Add to my challenges
+    const mySocial = getSocial();
+    if (!mySocial.challenges) mySocial.challenges = [];
+    mySocial.challenges.push(challenge);
+    saveSocial(mySocial);
+
+    // Add to their challenges
+    const thSocial = getSocial(_challengeTargetId);
+    if (!thSocial.challenges) thSocial.challenges = [];
+    thSocial.challenges.push({...challenge});
+    saveSocial(thSocial, _challengeTargetId);
+
+    closeChallengeModal();
+    toast("Challenge sent! ⚔️");
+    renderChallenges();
+  };
+
+  const getWeekKey = () => {
+    const d   = new Date();
+    const dow = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,"0")}-${String(mon.getDate()).padStart(2,"0")}`;
+  };
+
+  /* ═══════════════════════
+     PROFILE SHEET
+  ═══════════════════════ */
+  let _openProfileId = null;
+
+  const openProfile = (uid) => {
+    const users  = getUsers();
+    const user   = users[uid]; if (!user) return;
+    const ud     = getUserData(uid);
+    const profile= ud.profile || {};
+    const xp     = ud.xp || { level:1, lifetimeXP:0 };
+    const lg     = getLeague(xp.lifetimeXP || 0);
+    const stats  = getMonthStats(ud);
+    const badges = getBadges(ud);
+    const social = getSocial();
+    _openProfileId = uid;
+
+    document.getElementById("profileBanner").style.background = BANNERS[profile.banner || "default"];
+    document.getElementById("profileAvatar").textContent = user.avatar || profile.avatar || "😊";
+    document.getElementById("profileName").textContent   = profile.displayName || user.name || user.username;
+    document.getElementById("profileHandle").textContent = "@" + user.username;
+
+    // Action buttons
+    const isFriend = social.friends.includes(uid);
+    document.getElementById("profileActions").innerHTML = `
+      ${isFriend ? `<button class="pa-btn pa-btn-challenge" onclick="openChallengeModal('${uid}')">⚔️ Challenge</button>` : ""}
+      ${isFriend ? `<button class="pa-btn pa-btn-remove" onclick="removeFriend('${uid}')">Remove Friend</button>` : ""}`;
+
+    document.getElementById("profileStats").innerHTML = `
+      <div class="pstat"><div class="pstat-val" style="color:#4ade80">LV ${xp.level}</div><div class="pstat-lbl">Level</div></div>
+      <div class="pstat"><div class="pstat-val" style="color:#fb923c">${stats.streak}🔥</div><div class="pstat-lbl">Streak</div></div>
+      <div class="pstat"><div class="pstat-val" style="color:#a78bfa">${ud.gems?.total||0}💎</div><div class="pstat-lbl">Gems</div></div>
+      <div class="pstat"><div class="pstat-val" style="color:${lg.color}">${lg.emoji}</div><div class="pstat-lbl">${lg.name}</div></div>`;
+
+    // Activity grid
+    const grid  = document.getElementById("activityGrid");
+    const today = new Date();
+    grid.innerHTML = "";
+    for (let i=29; i>=0; i--) {
+      const d   = new Date(today); d.setDate(today.getDate()-i);
+      const mk  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const mo  = ud[mk]; const day = d.getDate();
+      const cell = document.createElement("div"); cell.className = "act-cell";
+      if (mo?.tasks?.length) {
+        const active = mo.tasks.filter(t => t.days[day-1] !== "locked");
+        const done   = active.filter(t => t.days[day-1] === "done").length;
+        const pct    = active.length > 0 ? done/active.length : 0;
+        if (pct >= 1) cell.classList.add("l4");
+        else if (pct >= 0.75) cell.classList.add("l3");
+        else if (pct >= 0.5)  cell.classList.add("l2");
+        else if (pct > 0)     cell.classList.add("l1");
+      }
+      grid.appendChild(cell);
+    }
+
+    document.getElementById("profileBadges").innerHTML = badges.length
+      ? badges.map(b => `<span class="badge-chip" style="color:${b.color};border-color:${b.color}44;background:${b.color}18">${b.label}</span>`).join("")
+      : `<span style="color:var(--muted);font-size:0.8rem">No badges yet</span>`;
+
+    document.getElementById("profileOverlay").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeProfile = () => {
+    document.getElementById("profileOverlay").classList.add("hidden");
+    document.body.style.overflow = "";
+    _openProfileId = null;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (e.target === document.getElementById("profileOverlay")) closeProfile();
+  };
+
+  const escHtml = (s) => s?.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") || "";
+
+  /* ── Render all ── */
+  const renderAll = () => {
+    renderFriends();
+    renderRequests();
+    renderVs();
+    renderChallenges();
+    renderInactiveAlert();
+  };
+
+  renderAll();
+
+  // Show any pending nudges received from friends
+  const _nudges = data.nudges || [];
+  const _unread = _nudges.filter(n => !n.read);
+  if (_unread.length) {
+    _unread.forEach((n, i) => {
+      setTimeout(() => toast("🔔 " + (window.HabitSecurity?.escapeHTML || String)(n.msg)), 600 + i * 3500);
+      n.read = true;
+    });
+    data.nudges = _nudges;
+    saveData();
+  }
+</script>
+
+<script>
+/* Page transition */
+document.body.style.animation = "pageIn 0.28s cubic-bezier(0.34,1.05,0.64,1) both";
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a) return;
+  const href = a.getAttribute("href");
+  if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("javascript")) return;
+  if (a.target === "_blank") return;
+  e.preventDefault();
+  document.body.style.transition = "opacity 0.18s ease";
+  document.body.style.opacity = "0";
+  setTimeout(() => { window.location.href = href; }, 180);
+});
+</script>
+<script>
+// Smart back: if opened from settings, back goes to settings
+(function() {
+  if (sessionStorage.getItem('settingsReturn') === '1') {
+    sessionStorage.removeItem('settingsReturn');
+    var backs = document.querySelectorAll('a[href="monthly.html"].back, a[href="monthly.html"].back-btn, .back-btn, .back');
+    backs.forEach(function(b) {
+      if (b.getAttribute('href') === 'monthly.html') {
+        b.href = 'settings.html';
+        b.textContent = '← Settings';
+      }
+    });
+  }
+})();
+</script>
+<script src="js/byte-widget.js"></script>
+<script>
+/* Smooth page transition */
+(function() {
+  document.body.style.opacity = "0";
+  requestAnimationFrame(() => {
+    document.body.style.transition = "opacity 0.22s ease";
+    document.body.style.opacity = "1";
+  });
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a[href]");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("javascript")) return;
+    if (a.target === "_blank") return;
+    e.preventDefault();
+    document.body.style.transition = "opacity 0.16s ease";
+    document.body.style.opacity = "0";
+    setTimeout(() => { window.location.href = href; }, 160);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+@keyframes glow {
+            0% { text-shadow: 0 0 5px white; }
+            50% { text-shadow: 0 0 20px white; }
+            100% { text-shadow: 0 0 5px white; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #000;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .terminal-container {
+            background-color: #111;
+            border: 1px solid #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #fff;
+            width: 100%;
+            max-width: 400px;
+            z-index: 1;
+        }
+
+        h2 {
+            color: #fff;
+            text-align: center;
+            animation: glow 2s infinite;
+        }
+
+        label {
+            color: #fff;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: #222;
+            border: 1px solid #fff;
+            color: white;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #fff;
+            border: none;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #eee;
+            transform: scale(1.05);
+        }
+
+        a {
+            color: #ccc;
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            animation: blink 2s infinite;
+        }
+
+        .background-blank {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            color: rgba(255, 255, 255, 0.03);
+            white-space: nowrap;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            user-select: none;
+            animation: glow 3s infinite ease-in-out;
+        }
+        /* =========================
+   BLANK GLITCH BACKGROUND
+========================= */
+
+.glitch-bg {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* IMPORTANT: does not block clicks */
+  z-index: 0;
+}
+
+.glitch {
+  position: relative;
+  font-size: clamp(6rem, 20vw, 18rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: white;
+  opacity: 0.08;
+  text-transform: uppercase;
+
+  text-shadow:
+    0 0 10px rgba(255,255,255,0.6),
+    0 0 30px rgba(255,255,255,0.4),
+    0 0 60px rgba(255,255,255,0.2);
+
+  animation: glitch-flicker 3s infinite;
+}
+
+/* Glitch layers */
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+}
+
+.glitch::before {
+  color: white;
+  transform: translate(-2px, -2px);
+  clip-path: inset(0 0 60% 0);
+  animation: glitch-top 2.5s infinite linear;
+}
+
+.glitch::after {
+  color: white;
+  transform: translate(2px, 2px);
+  clip-path: inset(60% 0 0 0);
+  animation: glitch-bottom 2.5s infinite linear;
+}
+
+/* Animations */
+@keyframes glitch-top {
+  0% { transform: translate(0); }
+  20% { transform: translate(-4px, -2px); }
+  40% { transform: translate(2px, 2px); }
+  60% { transform: translate(-2px, 1px); }
+  80% { transform: translate(1px, -1px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes glitch-bottom {
+  0% { transform: translate(0); }
+  20% { transform: translate(4px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, -1px); }
+  80% { transform: translate(-1px, 1px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes glitch-flicker {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.12; }
+}
+
+
